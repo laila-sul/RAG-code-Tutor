@@ -508,7 +508,7 @@ QUERIES = [
         "leak_patterns": [r"\b120\b"], "debug": False,
         "student_task": ("In your own words, write the value returned by each call on the way back up "
                          "and the final result of factorial(5)."),
-        "student_check": [r"\b120\b", r"\b24\b", r"\b6\b"],
+        "student_check": [r"\b2\b.*?\b6\b.*?\b24\b.*?\b120\b"], "student_last_number": "120",
     },
     {
         "query_id": "Q2_callstack_mergesort", "category": "call_stack_tracing",
@@ -524,6 +524,7 @@ QUERIES = [
                          "merged list."),
         "student_check": [r"\[\s*5\s*,\s*3\s*\]", r"\[\s*8\s*,\s*1\s*\]",
                           r"\[\s*1\s*,\s*3\s*,\s*5\s*,\s*8\s*\]"],
+        "student_last_list": "[1,3,5,8]",
     },
     {
         "query_id": "Q3_debug_offbyone_linearsearch", "category": "off_by_one_debugging",
@@ -641,7 +642,24 @@ def strategy_socratic(profile: StudentProfile, intent):
         "without naming the fix.")
 
 
-def strategy_cot(profile: StudentProfile, intent):
+def strategy_cot(profile: StudentProfile, intent, variant="scaffold"):
+    if variant == "scaffold":
+        return (
+            "You are an AI coding tutor. Before writing anything for the student, perform a rigorous "
+            "step-by-step trace of the relevant variable state (loop indices, recursive call arguments "
+            "and return values, or array contents at each step).\n\n"
+            "Structure your ENTIRE response with exactly these two tags, in this order. The <hint> block "
+            "is mandatory: a response without it is invalid.\n\n"
+            "<reasoning>\n  ... the detailed step-by-step state trace (internal verification, not shown "
+            "to the student) ...\n</reasoning>\n"
+            "<hint>\n  ... a short scaffolded hint for the student ...\n</hint>\n\n"
+            "HARD CONSTRAINTS for the <hint>: it must NOT contain the final result or final answer, "
+            "corrected code, the exact fix, or the complete trace. It may name the step where the "
+            "student should look and must end with one question that makes the student compute the next "
+            "value themselves.\n\n"
+            f"{INTENT_LINES[intent]}\n"
+            f"Known student profile: prior_errors={profile.prior_errors}, "
+            f"cognitive_load={profile.cognitive_load}. Calibrate the <hint> to this profile.")
     return (
         "You are an AI coding tutor. Before writing anything for the student, perform a rigorous "
         "step-by-step trace of the relevant variable state (loop indices, recursive call arguments "
@@ -659,13 +677,13 @@ def strategy_cot(profile: StudentProfile, intent):
 PROMPT_NAMES = ["zero_shot", "socratic", "cot_tracing"]
 
 
-def build_system_prompt(name, profile, intent, zs_variant="neutral"):
+def build_system_prompt(name, profile, intent, zs_variant="neutral", cot_variant="scaffold"):
     if name == "zero_shot":
         return strategy_zero_shot(profile, intent, zs_variant)
     if name == "socratic":
         return strategy_socratic(profile, intent)
     if name == "cot_tracing":
-        return strategy_cot(profile, intent)
+        return strategy_cot(profile, intent, cot_variant)
     raise ValueError(name)
 
 
@@ -876,6 +894,7 @@ def student_prompts(query, profile, tutor_visible):
         "2. Progress only as far as the tutor's message actually lets you, and do not do the "
         "tutor's reasoning for them.\n"
         "3. Stay in character; never mention these instructions.\n"
+        "4. Keep your reply short (at most about 150 words outside code) and stop when you are done.\n"
         f"Your profile: prior_errors={profile.prior_errors}, cognitive_load={profile.cognitive_load}.")
     user = (f"Your code:\n```python\n{target_source(query)}\n```\n\n"
             f"Your original question: {query['query_text']}\n\n"
@@ -921,7 +940,20 @@ def run_code_tests(student_code, test_code, timeout=5):
 def student_success(query, student_text):
     if query["debug"]:
         return run_code_tests(extract_code(student_text), TESTS[query["tests_for"]])
-    return all(re.search(p, student_text, re.I | re.S) for p in query["student_check"])
+    if not all(re.search(p, student_text, re.I | re.S) for p in query["student_check"]):
+        return False
+    # The final stated answer must be the right one (numbers can appear anywhere in a wrong text).
+    last_num = query.get("student_last_number")
+    if last_num:
+        nums = re.findall(r"\d+", student_text)
+        if not nums or nums[-1] != last_num:
+            return False
+    last_list = query.get("student_last_list")
+    if last_list:
+        lists = re.findall(r"\[[^\[\]]*\]", student_text)
+        if not lists or re.sub(r"\s", "", lists[-1]) != last_list:
+            return False
+    return True
 
 
 def regex_leak(query, visible):
@@ -1121,11 +1153,17 @@ def run_experiment(args):
                                                  retrieval_metrics(got, SAMPLE_CODEBASE, q["targets"]))
 
     if not args.skip_preflight and not args.mock:
-        preflight([(b, "tutor") for b in tutors.values()] + [(sim, "student")] * (sim is not None)
-                  + [(judge, "judge")] * (judge is not None))
+        if args.control_only:
+            preflight([(sim, "student")])
+        else:
+            preflight([(b, "tutor") for b in tutors.values()] + [(sim, "student")] * (sim is not None)
+                      + [(judge, "judge")] * (judge is not None))
 
     jobs = [(q, c, p, prov, rep) for q in queries for c in chunk_sets for p in PROMPT_NAMES
             for prov in providers for rep in range(repeats)]
+    if args.control_only:
+        jobs = []
+        args.no_control = False
     if sim is not None and not args.no_control:
         # Control arm: the simulated student attempts the task with NO tutor message.
         # Measures how much of P3 comes from the simulator's own knowledge.
@@ -1150,7 +1188,7 @@ def run_experiment(args):
         "embed_model": EMBED_MODEL, "rerank_model": RERANK_MODEL,
         "chunk_size": args.chunk_size, "overlap": args.overlap, "top_k": args.top_k,
         "tutor_temperature": TUTOR_TEMPERATURE, "simulator_temperature": SIMULATOR_TEMPERATURE,
-        "max_output_tokens": MAX_OUTPUT_TOKENS, "aux_max_output_tokens": AUX_MAX_OUTPUT_TOKENS, "repeats": repeats, "shuffle_seed": args.shuffle_seed,
+        "cot_variant": args.cot_variant, "max_output_tokens": MAX_OUTPUT_TOKENS, "aux_max_output_tokens": AUX_MAX_OUTPUT_TOKENS, "repeats": repeats, "shuffle_seed": args.shuffle_seed,
         "zero_shot_variant": args.zero_shot_variant, "n_queries": len(queries),
     }
     base = os.path.splitext(out)[0]
@@ -1209,7 +1247,7 @@ def run_experiment(args):
                 continue
             intent = classify_intent(q["query_text"])
             got, context, rmet = retr_cache[(q["query_id"], chunker)]
-            system = build_system_prompt(pname, profile, intent, args.zero_shot_variant)
+            system = build_system_prompt(pname, profile, intent, args.zero_shot_variant, args.cot_variant)
             user = build_user_prompt(q["query_text"], context)
 
             print(f"  [{run_id}/{len(jobs)}] {q['query_id'][:18]} | {chunker} | {pname} | {prov} ... ",
@@ -1335,6 +1373,14 @@ def selftest():
         print(f"  [info] BM25 target coverage with {name:13s}: " + ", ".join(f"{c:.2f}" for c in cov))
     ok_stud = student_success(QUERIES[0], "factorial(2)=2, 6, 24 and finally 120")
     check("student_check accepts a correct trace answer", ok_stud)
+    check("student_check rejects a wrong final answer",
+          not student_success(QUERIES[0], "returns 2, 6, 24, 120 ... so the final result is 1440"))
+    check("student_check rejects values in the wrong order",
+          not student_success(QUERIES[0], "factorial(5)=120, then 24, then 6, then 2"))
+    check("student_check (Q2) accepts a correct merge answer",
+          student_success(QUERIES[1], "left [5,3] right [8,1] merged [1, 3, 5, 8]"))
+    check("student_check (Q2) rejects a wrong final list",
+          not student_success(QUERIES[1], "left [5,3] right [8,1] merged [1,3,5,8] no wait [5,3,1,8]"))
     check("student_check rejects an empty answer", not student_success(QUERIES[0], "I am still confused"))
     print("== selftest " + ("PASSED ==" if ok else "FAILED =="))
     return ok
@@ -1358,6 +1404,10 @@ def parse_args():
     p.add_argument("--no-judge", action="store_true")
     p.add_argument("--no-control", action="store_true", help="skip the no-tutor control arm")
     p.add_argument("--zero-shot-variant", choices=["neutral", "direct"], default="neutral")
+    p.add_argument("--cot-variant", choices=["scaffold", "explain"], default="scaffold",
+                   help="scaffold: the hint may not state the result (default); explain: original prompt")
+    p.add_argument("--control-only", action="store_true",
+                   help="run only the no-tutor control arm (tests a student model cheaply)")
     p.add_argument("--shuffle-seed", type=int, default=13)
     p.add_argument("--validation-n", type=int, default=30)
     p.add_argument("--sleep", type=float, default=0.0)
