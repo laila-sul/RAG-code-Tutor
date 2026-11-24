@@ -116,6 +116,8 @@ TUTOR_TEMPERATURE = 0.0
 SIMULATOR_TEMPERATURE = 0.3
 JUDGE_TEMPERATURE = 0.0
 MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "6000"))  # includes hidden reasoning tokens
+# The simulated student and the judge write short answers; some small models reject a cap above 4096.
+AUX_MAX_OUTPUT_TOKENS = int(os.environ.get("AUX_MAX_OUTPUT_TOKENS", "4000"))
 MAX_RETRIES = 3
 GEMINI_TIMEOUT_S = float(os.environ.get("GEMINI_TIMEOUT_S", "90"))  # per-request timeout
 
@@ -755,7 +757,8 @@ class OpenAICompatBackend:
             self.client = openai.OpenAI(api_key=key, base_url=self.base_url, max_retries=0)
         t0 = time.perf_counter()
         r = self.client.chat.completions.create(
-            model=self.model, temperature=temperature, max_tokens=MAX_OUTPUT_TOKENS,
+            model=self.model, temperature=temperature,
+            max_tokens=MAX_OUTPUT_TOKENS if role == "tutor" else min(MAX_OUTPUT_TOKENS, AUX_MAX_OUTPUT_TOKENS),
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
         lat = time.perf_counter() - t0
         u = getattr(r, "usage", None)
@@ -999,16 +1002,17 @@ def done_keys(path):
 
 
 def preflight(backends):
+    """backends: list of (backend, role) pairs."""
     """One tiny call per distinct (provider, model) BEFORE the grid starts, so a wrong model
     name or key fails immediately instead of silently producing partial rows."""
     seen, bad = set(), []
-    for b in backends:
-        key = (b.provider, b.model)
+    for b, role in backends:
+        key = (b.provider, b.model, role)
         if key in seen:
             continue
         seen.add(key)
         try:
-            r = b.chat("Reply with the single word OK.", "ping", 0.0, role="tutor")
+            r = b.chat("Reply with the single word OK.", "ping", 0.0, role=role)
             ok = r["status"] == "OK"
             msg = r["text"][:150]
         except Exception as exc:  # noqa: BLE001
@@ -1117,7 +1121,8 @@ def run_experiment(args):
                                                  retrieval_metrics(got, SAMPLE_CODEBASE, q["targets"]))
 
     if not args.skip_preflight and not args.mock:
-        preflight(list(tutors.values()) + [b for b in (sim, judge) if b is not None])
+        preflight([(b, "tutor") for b in tutors.values()] + [(sim, "student")] * (sim is not None)
+                  + [(judge, "judge")] * (judge is not None))
 
     jobs = [(q, c, p, prov, rep) for q in queries for c in chunk_sets for p in PROMPT_NAMES
             for prov in providers for rep in range(repeats)]
@@ -1145,7 +1150,7 @@ def run_experiment(args):
         "embed_model": EMBED_MODEL, "rerank_model": RERANK_MODEL,
         "chunk_size": args.chunk_size, "overlap": args.overlap, "top_k": args.top_k,
         "tutor_temperature": TUTOR_TEMPERATURE, "simulator_temperature": SIMULATOR_TEMPERATURE,
-        "max_output_tokens": MAX_OUTPUT_TOKENS, "repeats": repeats, "shuffle_seed": args.shuffle_seed,
+        "max_output_tokens": MAX_OUTPUT_TOKENS, "aux_max_output_tokens": AUX_MAX_OUTPUT_TOKENS, "repeats": repeats, "shuffle_seed": args.shuffle_seed,
         "zero_shot_variant": args.zero_shot_variant, "n_queries": len(queries),
     }
     base = os.path.splitext(out)[0]
