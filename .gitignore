@@ -1,0 +1,7 @@
+.env
+*.log
+__pycache__/
+*.pyc
+.venv/
+# raw results are added deliberately, not by accident
+experiment_results_2*.csv
