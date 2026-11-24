@@ -12147,3 +12147,1123 @@ Look at the first split of the original list `[5, 3, 8, 1]`. What sub‑list doe
 **Final merged list:** `[1, 3, 5, 8]`","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The hidden reasoning correctly traces the merge sort splits and merges to [1, 3, 5, 8], while the student-visible text only asks guiding questions without giving the full answer.""}"
+15,2026-11-24T19:27:32.954614+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,fixed_size,cot_tracing,groq,openai/gpt-oss-120b,1,bm25+dense+crossencoder,"[""fixed:3:C1350-1850"", ""fixed:1:C450-950""]",1038,1.0,1,611,1199,124,1810,2.8442,0,OK,0,1,0,0,OK,OK,0,0,1,1.0,0.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+**Function under inspection**
+
+```python
+def bubble_sort_buggy(arr):
+    n = len(arr)
+    for i in range(n - 1):               # outer loop
+        for j in range(n - i - 2):       # inner loop (suspect)
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+**Goal of bubble sort**  
+During the *i‑th* pass (outer loop), the largest unsorted element should “bubble” to position `n‑i‑1`. Therefore the inner loop must compare every adjacent pair up to index `n‑i‑2` (so that `j+1` reaches `n‑i‑1`).
+
+**Step‑by‑step trace with a concrete array**
+
+Take `arr = [5, 2, 4, 3, 1]` (length `n = 5`).
+
+| Pass (`i`) | Inner‑loop range (`range(...)`) | Values of `j` visited | Comparisons performed | Array after inner loop |
+|------------|--------------------------------|-----------------------|-----------------------|------------------------|
+| 0          | `range(5 - 0 - 2) = range(3)`  | 0, 1, 2               | (0,1), (1,2), (2,3)   | `[2, 4, 3, 5, 1]`      |
+| 1          | `range(5 - 1 - 2) = range(2)`  | 0, 1                  | (0,1), (1,2)          | `[2, 3, 4, 5, 1]`      |
+| 2          | `range(5 - 2 - 2) = range(1)`  | 0                     | (0,1)                 | `[2, 3, 4, 5, 1]`      |
+| 3          | `range(5 - 3 - 2) = range(0)`  | – (no iteration)     | –                     | `[2, 3, 4, 5, 1]`      |
+
+**What we observe**
+
+- After the third outer pass (`i = 2`), the largest element `5` is correctly at index `3`.
+- The smallest element `1` should have moved to index `0` by the end of the algorithm, but it is still at the last position (`index 4`).
+- The inner loop never examined the pair `(j = 3, j+1 = 4)` because the upper bound `n - i - 2` stops **two** positions short of the end of the unsorted region.
+
+**Correct bound analysis**
+
+For a given `i`, the last comparison needed is between indices `n‑i‑2` and `n‑i‑1`.  
+Thus the inner loop should iterate over `j = 0 … n‑i‑2` **inclusive**, which in Python’s `range` syntax is `range(n - i - 1)`.
+
+If we replace `range(n - i - 2)` with `range(n - i - 1)`, the same trace becomes:
+
+| Pass (`i`) | Inner‑loop range (`range(n-i-1)`) | `j` values | Array after pass |
+|------------|-----------------------------------|------------|------------------|
+| 0          | `range(4)` → 0,1,2,3              | …          | `[2, 4, 3, 1, 5]` |
+| 1          | `range(3)` → 0,1,2                | …          | `[2, 3, 1, 4, 5]` |
+| 2          | `range(2)` → 0,1                  | …          | `[2, 1, 3, 4, 5]` |
+| 3          | `range(1)` → 0                    | …          | `[1, 2, 3, 4, 5]` |
+
+Now the array is fully sorted.
+
+**Conclusion of trace**  
+The bug originates from the inner loop’s upper bound (`n - i - 2`). It excludes the final necessary comparison on each pass, leaving the last two elements unsorted in certain inputs.
+
+</reasoning>
+<hint>
+Look at the line `for j in range(n - i - 2):`.  
+What index should the inner loop reach so that `arr[j]` can be compared with the element that will end up at position `n‑i‑1` after the current pass?  
+If `i = 0` and `n = 5`, what should be the highest value of `j` that gets processed?  
+What should the `range` call be instead of `range(n - i - 2)`? 
+</hint>","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):          # corrected range
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+I changed the inner loop to `range(n - i - 1)` so it compares the last element that should be bubbled into place.","[judge attempt 3] 
+
+{""accurate"": false, ""gave_full_answer"": false, ""reason"": ""The hidden trace incorrectly claims that after i=2 the largest element is correctly at index 3, and the visible text only asks questions rather than stating the corrected range(n - i - 1).""}"
+17,2026-11-24T19:27:42.596366+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,fixed_size,zero_shot,cerebras,gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:3:C1350-1850"", ""fixed:1:C450-950""]",1038,1.0,1,405,864,205,1269,0.7417,0,OK,0,1,1,1,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"### What’s happening?
+
+The classic bubble‑sort algorithm works like this:
+
+```text
+for each pass i = 0 … n‑1:
+    compare adjacent pairs 0 … n‑i‑2
+    (i.e. j runs from 0 up to n‑i‑2 inclusive)
+    and swap when the left element is larger.
+```
+
+In Python that translates to:
+
+```python
+for i in range(n):                # n passes (the last pass does nothing)
+    for j in range(n - i - 1):    # stop at the element just before the last unsorted one
+        if arr[j] > arr[j + 1]:
+            arr[j], arr[j + 1] = arr[j + 1], arr[j]
+```
+
+Your implementation has this inner‑loop bound:
+
+```python
+for j in range(n - i - 2):
+```
+
+Because of the extra “‑2” you stop **one element too early** on every pass.  
+The pair consisting of the last two unsorted elements (`arr[n‑i‑2]` and `arr[n‑i‑1]`) is never compared, so after the final pass those two items can remain out of order. That’s why you sometimes see the last two elements swapped incorrectly.
+
+### Fixing the loop bounds
+
+Replace the inner loop with `range(n - i - 1)`. The outer loop can stay `range(n - 1)` (or `range(n)` – the extra final pass does no harm). Here’s the corrected function:
+
+```python
+def bubble_sort(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    # n‑1 passes are enough, but n passes also works (the last pass does nothing)
+    for i in range(n - 1):
+        # go up to the last unsorted pair
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+### Quick sanity check
+
+```python
+>>> bubble_sort([5, 2, 9, 1, 5, 6])
+[1, 2, 5, 5, 6, 9]
+
+>>> bubble_sort([3, 2, 1])
+[1, 2, 3]
+
+>>> bubble_sort([1, 2, 3, 4])
+[1, 2, 3, 4]
+```
+
+All the test cases now produce a fully sorted list, including the last two elements.
+
+### Why the outer loop can be `range(n)` or `range(n‑1)`
+
+* With `range(n‑1)` you perform exactly the minimum number of passes needed.
+* With `range(n)` you do one extra pass that simply checks an already‑sorted list; it doesn’t change the result, only adds a negligible amount of work.
+
+Either choice is correct; the crucial part is the inner loop bound `n - i - 1`.","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):          # n‑1 passes are enough
+        for j in range(n - i - 1):  # compare up to the last unsorted pair
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+I changed the inner loop bound from `n - i - 2` to `n - i - 1` so the last unsorted pair is compared on every pass.","[judge attempt 3] 
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor correctly identifies the inner loop off-by-one (n-i-2 should be n-i-1) and provides a complete corrected bubble sort implementation.""}"
+81,2026-11-24T19:35:59.522346+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,fixed_size,zero_shot,groq,openai/gpt-oss-120b,2,bm25+dense+crossencoder,"[""fixed:3:C1350-1850"", ""fixed:1:C450-950""]",1038,1.0,1,405,902,165,1307,2.2509,0,OK,0,1,1,1,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"### What’s happening?
+
+`bubble_sort_buggy` tries to implement the classic *bubble‑sort* algorithm:
+
+```python
+for i in range(n - 1):          # each pass pushes the next‑largest element to the end
+    for j in range(n - i - 2):  # compare adjacent pairs j and j+1
+        if arr[j] > arr[j + 1]:
+            swap …
+```
+
+The outer loop (`i`) is fine – after the first pass the largest element is guaranteed to be at index `n‑1`, after the second pass the second‑largest is at `n‑2`, and so on.
+
+The **inner loop** is the problem.  
+`range(n - i - 2)` stops **one element too early**.  
+
+* When `i = 0` (first pass) we need to compare indices `0 … n‑2` (i.e. `n‑1` comparisons).  
+  `range(n - i - 2)` gives `range(n‑2)`, which only goes up to `n‑3`.  
+  The pair `(n‑2, n‑1)` is never examined, so the last two elements can stay out of order.
+
+Because the inner loop is short by one comparison on **every pass**, the algorithm may finish with the final two items still unsorted.
+
+### The correct bound
+
+The inner loop must run while `j + 1` is a valid index, i.e. up to `n‑i‑2` **inclusive**. In Python `range` is exclusive at the end, so we need:
+
+```python
+for j in range(n - i - 1):   # stops at n-i-2, inclusive
+```
+
+Now the last comparison of each pass (`arr[n-i-2]` vs `arr[n-i-1]`) is performed.
+
+### Fixed implementation
+
+```python
+def bubble_sort(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    # After each outer iteration, the largest unsorted element is at position n-i-1
+    for i in range(n - 1):
+        # Compare up to the element just before the sorted tail
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+### Optional improvement – early exit
+
+If the list becomes sorted before we finish all passes, we can stop early:
+
+```python
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):
+        swapped = False
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        if not swapped:          # no swaps → already sorted
+            break
+    return arr
+```
+
+### Quick sanity check
+
+```python
+>>> bubble_sort([5, 2, 9, 1, 5, 6])
+[1, 2, 5, 5, 6, 9]
+
+>>> bubble_sort([3, 2])
+[2, 3]          # works for the two‑element edge case
+```
+
+Now the function reliably sorts the entire list, including the last two elements.","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        # Include the last comparison of each pass
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+I changed the inner loop to `range(n - i - 1)` so the final adjacent pair is compared on every pass.","[judge attempt 2] 
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly identifies the inner-loop off-by-one, gives the exact corrected bound range(n - i - 1), and provides a complete fixed implementation.""}"
+92,2026-11-24T19:37:48.688234+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,ast_semantic,cot_tracing,cerebras,gpt-oss-120b,2,bm25+dense+crossencoder,"[""FunctionDef:binary_search:L41-52"", ""FunctionDef:linear_search_buggy:L55-60""]",605,1.0,1,490,839,217,1329,0.8328,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+# Internal verification of the two algorithms on a sample sorted list
+arr = [2, 5, 8, 12, 16, 23, 38, 41, 55, 67]   # length = 10
+target = 38
+
+## Binary Search trace
+1. low=0, high=9 → mid=(0+9)//2 = 4 → arr[4]=16
+   - 16 < 38 → low = mid+1 = 5
+2. low=5, high=9 → mid=(5+9)//2 = 7 → arr[7]=41
+   - 41 > 38 → high = mid-1 = 6
+3. low=5, high=6 → mid=(5+6)//2 = 5 → arr[5]=23
+   - 23 < 38 → low = mid+1 = 6
+4. low=6, high=6 → mid=(6+6)//2 = 6 → arr[6]=38
+   - arr[mid] == target → return 6
+
+# Number of loop iterations = 4
+
+## Linear Search (buggy version) trace
+for i in range(len(arr) - 1):   # i goes from 0 to 8
+- i=0: arr[0]=2 ≠ 38
+- i=1: arr[1]=5 ≠ 38
+- i=2: arr[2]=8 ≠ 38
+- i=3: arr[3]=12 ≠ 38
+- i=4: arr[4]=16 ≠ 38
+- i=5: arr[5]=23 ≠ 38
+- i=6: arr[6]=38 → return 6
+
+# Number of loop iterations = 7 (stops early because target found)
+
+# Complexity reasoning
+- Binary search halves the search space each iteration → O(log n) comparisons in the worst case.
+- Linear search checks each element sequentially → O(n) comparisons in the worst case.
+- The buggy version also stops one element early (doesn’t check the last index), which could miss a target at the final position.
+
+# Decision criteria (internal)
+If n is small or the list is unsorted, linear search (or a corrected version) is simpler.
+If n is large and the list is sorted (or can be sorted), binary search gives far fewer comparisons.
+</reasoning>
+<hint>
+Consider a list with 1,024 elements. How many times can you halve 1,024 before you get down to a single element? Use that count to estimate the worst‑case number of comparisons for binary search, and compare it to the 1,024 comparisons you’d need in the worst case for linear search. What does this tell you about which algorithm scales better as the list grows? 
+</hint>","Binary search runs in \(O(\log_2 n)\) time, so for 1,024 items it needs about 10 comparisons, while linear search runs in \(O(n)\) time, needing up to 1,024 comparisons. Use binary search on sorted data when you need fast look‑ups and can afford the sort, and linear search when the list is small, unsorted, or you only need a single pass.","[judge attempt 2] 
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The visible text is a Socratic prompt rather than a full answer, and its complexity claims and hidden traces are consistent with the code and notes.""}"
+95,2026-11-24T19:38:12.335283+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,cot_tracing,cerebras,gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,591,751,211,1342,1.0364,0,OK,0,1,0,0,OK,OK,0,0,1,1.0,0.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+1. **Linear Search**  
+   - Initialize index = 0.  
+   - While index < len(arr):  
+     - Compare arr[index] with target.  
+     - If equal → return index; else → index += 1.  
+   - If loop ends → return -1.  
+   - **State trace** for an array of length n: the loop runs at most *n* times, performing one comparison per iteration.  
+
+2. **Binary Search (iterative)**  
+   - Start with low = 0, high = len(arr) - 1.  
+   - Loop while low ≤ high:  
+     - Compute mid = (low + high)//2.  
+     - Compare arr[mid] with target.  
+       - If equal → return mid.  
+       - If arr[mid] < target → low = mid + 1.  
+       - Else → high = mid - 1.  
+   - If loop exits → return -1.  
+   - **State trace**: each iteration halves the search interval (high - low + 1). After k iterations, the interval size is roughly n / 2^k. The loop stops when the interval size becomes 0, i.e., when 2^k ≥ n → k ≈ log₂ n.  
+
+3. **Complexity comparison**  
+   - Linear search performs up to *n* comparisons → **O(n)** time.  
+   - Binary search performs up to ⌈log₂ n⌉ comparisons → **O(log n)** time, but it requires the input list to be sorted beforehand.  
+
+4. **Choosing between them**  
+   - If the list is already sorted (or can be kept sorted) and many look‑ups are needed, binary search is preferred because of its logarithmic growth.  
+   - If the list is unsorted, small, or only a few searches are required, the overhead of sorting (O(n log n)) or maintaining order may outweigh binary search’s benefit, making linear search simpler and faster in practice.  
+</reasoning>
+<hint>
+Think about how many times each algorithm examines an element in the worst case. For a list of 1,024 items, how many comparisons does binary search need at most, and how many does linear search need at most? What does this tell you about their growth rates as the list gets larger? 
+</hint>","Binary search runs in \(O(\log n)\) time, needing at most about 10 comparisons for a 1,024‑item list, while linear search runs in \(O(n)\) time, needing up to 1,024 comparisons. Use binary search on sorted data when speed matters, and linear search when the list is small, unsorted, or you want the simplest code.","[judge attempt 2] 
+
+{""accurate"": false, ""gave_full_answer"": false, ""reason"": ""The hidden reasoning incorrectly claims binary search uses at most ceil(log2 n) comparisons, while the provided iterative binary search can require floor(log2 n)+1 iterations (11 for 1024).""}"
+156,2026-11-24T19:45:31.018445+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,cot_tracing,cerebras,gpt-oss-120b,2,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,494,1029,266,1523,0.9683,0,OK,0,1,0,0,OK,OK,0,0,1,1.0,0.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+**Step‑by‑step trace of the loops**
+
+Assume `arr` has length `n = 5` (e.g., `[5, 4, 3, 2, 1]`).  
+The outer loop runs `for i in range(n‑1)`, i.e. `i = 0,1,2,3`.
+
+| i | Inner‑loop range expression | Values taken by `j` | Pair compared (`arr[j]` vs `arr[j+1]`) |
+|---|----------------------------|----------------------|----------------------------------------|
+| 0 | `range(n - i - 2)` → `range(5‑0‑2)` = `range(3)` | 0, 1, 2 | (0,1), (1,2), (2,3) |
+| 1 | `range(5‑1‑2)` = `range(2)` | 0, 1 | (0,1), (1,2) |
+| 2 | `range(5‑2‑2)` = `range(1)` | 0 | (0,1) |
+| 3 | `range(5‑3‑2)` = `range(0)` | – (no iteration) | – |
+
+**What is missing?**  
+When `i = 0` the inner loop stops at `j = 2`. The comparison `arr[2] > arr[3]` is performed, but the pair `(arr[3], arr[4])` is never examined because `j` never reaches `3`. Consequently the largest element may stay at index 4, leaving the last two elements unsorted.
+
+**Correct bound logic**  
+In a classic bubble sort, after `i` passes the largest `i` elements are already at the end, so the inner loop must compare up to the element just before the sorted suffix. The last index that needs to be compared is `n‑i‑2` (the left element of the final pair), so `j` must run **through** that index. In Python `range(stop)` stops *before* `stop`, therefore the stop value must be `n‑i‑1`.
+
+If we change the inner loop to `for j in range(n - i - 1):` the table becomes:
+
+| i | `range(n - i - 1)` | `j` values | Pairs compared |
+|---|--------------------|------------|----------------|
+| 0 | `range(4)` | 0, 1, 2, 3 | (0,1), (1,2), (2,3), (3,4) |
+| 1 | `range(3)` | 0, 1, 2 | (0,1), (1,2), (2,3) |
+| … | … | … | … |
+
+Now every adjacent pair is examined on each pass, guaranteeing a fully sorted array.
+
+**Key observation**: the off‑by‑one error originates from using `n - i - 2` as the stop argument to `range`, which excludes the final needed comparison.
+
+</reasoning>
+<hint>
+Look at the inner loop when `i = 0` and the array length is 5.  
+What is the highest value that `j` takes with the current bound `range(n - i - 2)`?  
+Which adjacent pair is never compared because of that bound?  
+What should the stop value be so that `j` also reaches the index that lets you compare the last two elements?
+</hint>","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        # Corrected inner loop bound: use n - i - 1 to compare the last pair
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+I changed the inner loop bound from `n - i - 2` to `n - i - 1` so the last adjacent pair is compared.","[judge attempt 2] 
+
+{""accurate"": false, ""gave_full_answer"": false, ""reason"": ""The hidden reasoning incorrectly claims the missing comparison can leave the largest element at index 4 while making the last two elements out of order, which is not consistent with the code's behavior.""}"
+162,2026-11-24T19:46:17.223666+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,cot_tracing,cerebras,gpt-oss-120b,2,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,591,751,211,1342,0.7176,0,OK,0,1,0,0,OK,OK,0,0,1,1.0,0.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+1. **Linear Search**  
+   - Initialize index = 0.  
+   - While index < len(arr):  
+     - Compare arr[index] with target.  
+     - If equal → return index; else → index += 1.  
+   - If loop ends → return -1.  
+   - **State trace** for an array of length n: the loop runs at most *n* times, performing one comparison per iteration.  
+
+2. **Binary Search (iterative)**  
+   - Start with low = 0, high = len(arr) - 1.  
+   - Loop while low ≤ high:  
+     - Compute mid = (low + high)//2.  
+     - Compare arr[mid] with target.  
+       - If equal → return mid.  
+       - If arr[mid] < target → low = mid + 1.  
+       - Else → high = mid - 1.  
+   - If loop exits → return -1.  
+   - **State trace**: each iteration halves the search interval (high - low + 1). After k iterations, the interval size is roughly n / 2^k. The loop stops when the interval size becomes 0, i.e., when 2^k ≥ n → k ≈ log₂ n.  
+
+3. **Complexity comparison**  
+   - Linear search performs up to *n* comparisons → **O(n)** time.  
+   - Binary search performs up to ⌈log₂ n⌉ comparisons → **O(log n)** time, but it requires the input list to be sorted beforehand.  
+
+4. **Choosing between them**  
+   - If the list is already sorted (or can be kept sorted) and many look‑ups are needed, binary search is preferred because of its logarithmic growth.  
+   - If the list is unsorted, small, or only a few searches are required, the overhead of sorting (O(n log n)) or maintaining order may outweigh binary search’s benefit, making linear search simpler and faster in practice.  
+</reasoning>
+<hint>
+Think about how many times each algorithm examines an element in the worst case. For a list of 1,024 items, how many comparisons does binary search need at most, and how many does linear search need at most? What does this tell you about their growth rates as the list gets larger? 
+</hint>","Binary search runs in O(log n) time, whereas a linear search runs in O(n). I would use binary search on a sorted list when fast look‑ups are needed, and linear search for small or unsorted lists where the overhead of sorting or maintaining order isn’t worth the speed gain.","[judge attempt 2] 
+
+{""accurate"": false, ""gave_full_answer"": false, ""reason"": ""The hidden reasoning incorrectly claims binary search uses at most ceil(log2 n) comparisons, while the provided iterative binary search can require floor(log2 n)+1 iterations (11 for 1024).""}"
+173,2026-11-24T19:48:03.696930+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,zero_shot,cerebras,gpt-oss-120b,2,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,288,689,112,977,0.6369,0,OK,0,1,1,1,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"The problem is the **inner loop’s upper bound**.  
+
+In a classic bubble‑sort you need to compare every adjacent pair up to the element that is already in its final position.  
+For an array of length `n` the inner loop should run from `0` to `n‑i‑2` **inclusive**, i.e. `range(n‑i‑1)`.  
+
+Your code uses:
+
+```python
+for j in range(n - i - 2):
+```
+
+Because `range` stops **before** the stop value, this iterates only up to `n‑i‑3`.  
+Consequently the last adjacent pair (`arr[n‑i‑2]` and `arr[n‑i‑1]`) is never compared, so the two right‑most elements can remain unsorted.
+
+### Fixed version
+
+```python
+def bubble_sort(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):                 # we need n‑1 passes
+        for j in range(n - i - 1):         # compare up to the last unsorted pair
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+### Why this works
+
+* **Outer loop (`i`)** – after each pass the largest element among the unsorted part “bubbles” to the end, so the next pass can ignore one more element at the right side. Hence we need `n‑1` passes (or `range(n)` – the last pass does nothing but is harmless).
+
+* **Inner loop (`j`)** – on the `i`‑th pass the rightmost `i` elements are already sorted, so we only need to compare indices `0 … n‑i‑2`. `range(n‑i‑1)` gives exactly those indices.
+
+### Optional optimisation
+
+If you want to stop early when the list is already sorted, you can add a `swapped` flag:
+
+```python
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):
+        swapped = False
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        if not swapped:          # no swaps → array is sorted
+            break
+    return arr
+```
+
+Now the algorithm will finish in O(n) time for an already‑sorted list, while still being O(n²) in the worst case.","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):                 # n-1 passes
+        for j in range(n - i - 1):         # compare up to the last unsorted pair
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+I changed the inner loop to `range(n - i - 1)` so the last adjacent pair is compared.","[judge attempt 2] 
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor correctly identifies the off-by-one inner-loop bound, explains why it misses the final adjacent comparison, and provides the complete corrected bubble sort code without making inconsistent claims.""}"
+174,2026-11-24T19:48:13.127112+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,zero_shot,cerebras,gpt-oss-120b,1,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,288,685,133,973,0.7438,1,OK,0,1,1,1,OK,OK,0,1,1,0.0,0.0,1.0,0.3333,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"### What’s happening?
+
+In a classic bubble‑sort you need to compare **every adjacent pair** that hasn’t already been “bubbled” to its final position.  
+For an array of length `n` the inner loop must run up to index `n‑i‑2` **inclusive**, i.e. the range should be `range(0, n‑i‑1)`.  
+
+Your code uses:
+
+```python
+for j in range(n - i - 2):
+```
+
+When `i` is `0` this iterates only up to `j = n‑3`.  
+The pair `(arr[n‑2], arr[n‑1])` is never examined, so the last two elements can stay out of order.  
+That’s why the sort sometimes finishes with the final two items swapped.
+
+### Fixing the loop bounds
+
+```python
+def bubble_sort(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    # We need n‑1 passes (the last pass is unnecessary but harmless)
+    for i in range(n - 1):
+        # Compare up to the element just before the already‑sorted suffix
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+**Why this works**
+
+* `range(n - i - 1)` generates `j = 0 … n‑i‑2`.  
+  The last `j` in each pass is `n‑i‑2`, so the comparison `arr[j] > arr[j+1]` checks the pair `(arr[n‑i‑2], arr[n‑i‑1])`.  
+* As `i` grows, the “sorted” suffix at the right end of the list gets larger, so we stop one element earlier each pass.
+
+### Quick sanity check
+
+```python
+>>> bubble_sort([5, 2, 9, 1, 5, 6])
+[1, 2, 5, 5, 6, 9]
+
+>>> import random
+>>> for _ in range(1000):
+...     a = random.sample(range(1000), 20)   # 20 distinct numbers
+...     if bubble_sort(a[:]) != sorted(a):
+...         print(""mismatch!"")
+...         break
+... else:
+...     print(""All good!"")
+All good!
+```
+
+Now the function reliably sorts the entire list, including the last two elements.","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):   # include the last adjacent pair
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+I changed the inner loop bound from `range(n - i - 2)` to `range(n - i - 1)` so the last adjacent pair is compared each pass.","[judge attempt 2] 
+
+{""accurate"": false, ""gave_full_answer"": true, ""reason"": ""The tutor gives the correct corrected code but incorrectly claims the final pass of the n-1-pass bubble sort is unnecessary, which is false for inputs like [3, 2, 1].""}"
+179,2026-11-24T19:49:01.451210+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,cot_tracing,groq,openai/gpt-oss-120b,2,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,591,867,236,1458,2.4962,0,OK,0,1,0,0,OK,OK,0,0,1,1.0,0.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+**Internal verification trace (not shown to the student)**  
+
+1. **Linear search** (`linear_search_buggy` placeholder) – typical implementation:  
+   - Initialize `i = 0`.  
+   - Loop while `i < len(arr)`: compare `arr[i]` with `target`.  
+   - If equal, return `i`; else increment `i`.  
+   - If loop ends, return `-1`.  
+   - *State progression*: for an array of length *n*, the loop executes at most *n* times, performing one comparison per iteration.  
+
+2. **Binary search** (`binary_search`) – iterative version:  
+   - Start with `low = 0`, `high = len(arr) - 1`.  
+   - While `low <= high`: compute `mid = (low + high) // 2`.  
+   - Compare `arr[mid]` with `target`.  
+   - If equal → return `mid`.  
+   - If `arr[mid] < target` → set `low = mid + 1`.  
+   - Else → set `high = mid - 1`.  
+   - *State progression*: each iteration halves the search interval. After *k* iterations, the interval size is `⌊n / 2^k⌋`. Loop stops when interval size becomes 0 or target is found.  
+
+3. **Complexity derivation**:  
+   - Linear search performs at most *n* comparisons → **O(n)** time.  
+   - Binary search performs at most `⌈log₂ n⌉` comparisons → **O(log n)** time, but requires the input list to be **sorted** beforehand.  
+
+4. **Edge‑case considerations**:  
+   - If the list is unsorted, binary search gives incorrect results; you would need to sort first (cost **O(n log n)**).  
+   - For very small *n* (e.g., n ≤ 10), the constant factors of binary search (extra calculations for `mid`, updating bounds) may outweigh its theoretical advantage, making linear search practically faster.  
+
+5. **When to choose**:  
+   - Use **binary search** when the data is already sorted and you need many look‑ups; the amortized cost per lookup is logarithmic.  
+   - Use **linear search** when the list is unsorted, when the overhead of sorting outweighs the benefit, or when the list is tiny and simplicity matters.  
+
+The trace confirms that the two algorithms differ in the number of comparisons they perform relative to the size of the input and the precondition (sorted vs unsorted).  
+</reasoning>
+
+<hint>
+Think about how many elements each algorithm examines in the worst case. For a list of 1 000 000 items, how many comparisons does binary search need at most, and how many does linear search need at most? How does the requirement that the list be sorted affect your choice?  
+</hint>","Binary search runs in O(log n) time, so for a list of 1 000 000 items it needs at most about 20 comparisons, whereas linear search runs in O(n) time, needing up to 1 000 000 comparisons. Use binary search when the list is sorted and you need many fast look‑ups; use linear search when the list is unsorted, very small, or you only need a single quick check.","[judge attempt 2] 
+
+{""accurate"": false, ""gave_full_answer"": false, ""reason"": ""The hidden reasoning misdescribes the provided linear_search_buggy as checking all n elements and gives an imprecise binary-search comparison bound, so not every claim is consistent with the full code.""}"
+181,2026-11-24T19:49:12.101226+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,zero_shot,groq,openai/gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,394,1601,132,1995,3.7331,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"### Time‑complexity at a glance  
+
+| Algorithm | Input requirement | Worst‑case complexity | Average‑case complexity | Best‑case |
+|-----------|-------------------|----------------------|--------------------------|-----------|
+| **Linear search** (e.g. `linear_search_buggy`) | **No ordering needed** – works on any list | **O(n)** – you may have to look at every element | **O(n)** – on random data you still scan a constant fraction of the list | **O(1)** – the target happens to be the first element |
+| **Binary search** (`binary_search`) | **Sorted list** (strictly increasing or non‑decreasing) | **O(log n)** – each iteration halves the remaining range | **O(log n)** – same as worst case because the algorithm always halves the interval | **O(1)** – the middle element is the target on the first check |
+
+*The “n” above is the number of elements in the list.*
+
+---
+
+## Why the difference matters
+
+### 1. **Growth rate**
+* **Linear** grows proportionally to the size of the data.  
+  If you double the list length, the number of comparisons roughly doubles.
+* **Binary** grows logarithmically.  
+  Doubling the list length adds only **one** extra comparison (because `log₂(2n) = log₂ n + 1`).
+
+| n | Linear comparisons (≈n) | Binary comparisons (≈log₂ n) |
+|---|------------------------|------------------------------|
+| 10 | 10 | 4 |
+| 1 000 | 1 000 | 10 |
+| 1 000 000 | 1 000 000 | 20 |
+| 1 000 000 000 | 1 000 000 000 | 30 |
+
+For large collections, the difference is dramatic.
+
+### 2. **Pre‑condition (sortedness)**
+Binary search **only works** if the data is already sorted (or you can guarantee that the part you are searching is sorted).  
+If you have an unsorted list, you must sort it first, which costs **O(n log n)** (or better with specialized algorithms). The total cost becomes:
+
+```
+sort (O(n log n)) + binary search (O(log n))  ≈ O(n log n)
+```
+
+If you only need a single lookup and the list is not sorted, a linear scan (`O(n)`) is cheaper overall.
+
+### 3. **Constant factors & cache behavior**
+* Linear search is extremely simple: a single loop, sequential memory access, excellent cache locality. The hidden constant factor is tiny.
+* Binary search jumps around the array (midpoint → left half → right half …). This can cause more cache misses, especially for very large arrays that don’t fit in L1/L2 cache. In practice, for **small to medium** arrays (a few hundred elements) the constant‑factor overhead of binary search can make it *slightly slower* than a linear scan, even though its asymptotic complexity is better.
+
+### 4. **Dynamic data**
+If the collection changes frequently (insertions/deletions) and you need to keep it sorted, maintaining the sorted order can be expensive (e.g., `O(n)` per insertion for a plain Python list). In such cases you might prefer a data structure that gives you fast look‑ups without full sorting (e.g., a hash table/dictionary → average‑case **O(1)**) or a balanced binary search tree (**O(log n)** for insert/search/delete).
+
+---
+
+## When to choose which algorithm
+
+| Situation | Recommended approach |
+|-----------|----------------------|
+| **Unsorted data, one‑off lookup** | **Linear search** – no sorting cost, simple, fast for small‑to‑moderate sizes. |
+| **Unsorted data, many lookups** | **Sort once** (`O(n log n)`) then use **binary search** for each subsequent lookup, or better yet use a **hash table** (`dict`/`set`) for O(1) average lookups. |
+| **Already sorted data** | **Binary search** – you get O(log n) per lookup with no extra work. |
+| **Very small arrays (≤ ~30 elements)** | Linear search is often faster in practice because of lower overhead and better cache locality. |
+| **Memory‑constrained environment** | Linear search uses no extra memory; binary search works in‑place but still needs the sorted array. |
+| **Need to preserve original order** | Linear search (doesn’t require reordering). |
+| **Frequent inserts/deletes & need fast lookups** | Use a **hash table** (`dict`/`set`) or a balanced tree (`bisect` on a list + `insort` if you can tolerate O(n) insert cost). |
+| **Real‑time or embedded systems where predictability matters** | Binary search gives a guaranteed upper bound of `log₂ n` steps, which can be easier to reason about than a linear scan that could take up to `n` steps. |
+
+---
+
+### Quick “rule of thumb”
+
+1. **If the list is already sorted** → go with binary search.
+2. **If the list is unsorted and you only need a few searches** → linear search is fine.
+3. **If you need many searches on an unsorted list** → either sort once + binary search *or* build a hash‑based structure (`dict`/`set`) for O(1) average lookups.
+4. **If the list is tiny** → the simplicity of linear search usually wins.
+
+---
+
+### Example in Python
+
+```python
+def linear_search(arr, target):
+    """"""Simple O(n) scan.""""""
+    for i, val in enumerate(arr):
+        if val == target:
+            return i
+    return -1
+
+def binary_search(arr, target):
+    """"""Iterative O(log n) search; assumes arr is sorted.""""""
+    lo, hi = 0, len(arr) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+
+# Usage
+data = [5, 2, 9, 1, 7]               # unsorted
+print(linear_search(data, 9))        # works immediately
+
+data_sorted = sorted(data)           # O(n log n) once
+print(binary_search(data_sorted, 9)) # fast O(log n) lookups thereafter
+```
+
+Remember: **Complexity tells you how the algorithm scales**, but the *actual* choice also depends on data size, ordering, mutability, and hardware characteristics. Use the guidelines above to pick the right tool for the job.","Linear search runs in O(n) time and is simplest to use when the list is unsorted, small, or you only need a few look‑ups. Binary search runs in O(log n) time but requires a sorted list, making it the better choice for large, sorted collections or when performing many repeated searches.","[judge attempt 2] 
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The visible answer fully states that binary search is O(log n) and requires sorted data while linear search is O(n) and works on unsorted data, with complete guidance on when to choose each.""}"
+187,2026-11-24T19:49:45.997508+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,zero_shot,groq,openai/gpt-oss-120b,1,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,394,1334,133,1728,3.1051,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"### Time‑complexity recap  
+
+| Algorithm | Typical complexity (worst‑case) | Data requirements | Typical constant factors |
+|-----------|--------------------------------|-------------------|--------------------------|
+| **Linear search** (`O(n)`) | Scans every element until it finds the target (or reaches the end). | Works on **any** list – sorted, unsorted, mutable, etc. | Very small – just a single comparison per element, excellent cache locality. |
+| **Binary search** (`O(log n)`) | Repeatedly halves the search interval. | **Requires a sorted list** (or a data structure that can answer “is target < mid?”). | Slightly larger per‑iteration cost (mid‑index calculation, two comparisons) and more branch mis‑predictions, but the number of iterations drops dramatically as *n* grows. |
+
+#### Why the difference matters  
+
+* **Growth rate** –  
+  * For *n = 10⁶*:  
+    * Linear search may examine up to 1 000 000 elements → ~1 M comparisons.  
+    * Binary search needs at most ⌈log₂ 1 000 000⌉ ≈ 20 comparisons.  
+  * The gap widens as the list gets larger; for tiny lists (say *n* ≤ 10) the difference is often negligible.
+
+* **Sorted‑ness** –  
+  Binary search can only be applied if the collection is already sorted (or you can afford the cost of sorting first). Sorting a list of size *n* costs `O(n log n)`, which dwarfs the `O(log n)` search cost if you only need to search once.
+
+* **Mutability / updates** –  
+  If the data changes frequently, keeping it sorted may be expensive (you’d need to re‑insert in order, which is `O(n)` for a plain Python list). In such a scenario a linear scan on the unsorted data can be cheaper overall.
+
+* **Memory & data structures** –  
+  Binary search works on any random‑access sequence (Python list, array, `numpy` array). If you have a linked list, random access is `O(n)`, so binary search loses its advantage. In that case you’d stick with linear search or use a different structure (e.g., a balanced tree).
+
+### When to pick which algorithm  
+
+| Situation | Recommended approach |
+|-----------|----------------------|
+| **Data is already sorted** and you will perform many look‑ups (e.g., a dictionary of IDs, a pre‑computed table) | **Binary search** – amortized `O(log n)` per query. |
+| **Data is unsorted** and you only need a single lookup (or a few) | **Linear search** – no preprocessing needed, `O(n)` but with tiny constant factor. |
+| **Data size is tiny** (≤ ~20 elements) | Either works; linear search is often simpler and may be faster due to lower overhead. |
+| **Data changes often** (insertions/deletions) and you cannot keep it sorted efficiently | **Linear search** on the current unsorted collection, or switch to a data structure that maintains order (e.g., `bisect.insort` on a list, `sortedcontainers` module, a balanced BST). |
+| **You need fast “exists?” checks** and you can afford extra memory | Use a **hash‑based set/dict** (`O(1)` average) – this beats both linear and binary search for membership tests. |
+| **Cache‑friendly, sequential access is important** (e.g., scanning a memory‑mapped file) | Linear search often wins because it accesses memory sequentially, which modern CPUs prefetch very efficiently. |
+
+### Quick mental checklist  
+
+1. **Is the collection sorted?**  
+   *Yes →* binary search (or `bisect` module).  
+   *No →* linear search (or sort first if you’ll search many times).
+
+2. **How many searches will you do?**  
+   *Few* → linear search is usually fine.  
+   *Many* → pay the sorting cost once, then binary search each time.
+
+3. **Will the collection be mutated?**  
+   *Frequent mutations* → keep it unsorted and use linear search, or choose a data structure that maintains order efficiently.
+
+4. **Is the collection huge?**  
+   *Very large* → binary search’s `log n` factor becomes decisive.
+
+### Example in Python  
+
+```python
+from bisect import bisect_left
+
+def binary_search(arr, target):
+    """"""Assumes arr is sorted.""""""
+    i = bisect_left(arr, target)
+    return i if i < len(arr) and arr[i] == target else -1
+
+def linear_search(arr, target):
+    """"""Works on any list.""""""
+    for i, val in enumerate(arr):
+        if val == target:
+            return i
+    return -1
+```
+
+*If `arr` is already sorted* and you call `binary_search` thousands of times, you’ll see a dramatic speed‑up compared with `linear_search`.  
+*If `arr` is unsorted* and you only need a single lookup, `linear_search` avoids the sorting step entirely.
+
+---
+
+**Bottom line:**  
+- **Binary search = `O(log n)` but requires sorted, random‑access data.** Use it when the data is static or can be kept sorted and you have many look‑ups.  
+- **Linear search = `O(n)` but works on any collection with minimal overhead.** Use it for small, unsorted, or frequently‑changing datasets, or when the cost of sorting outweighs the benefit of faster queries.","Binary search runs in \(O(\log n)\) time but only works on a sorted, random‑access list, so it’s best when the data is static or can stay sorted and you’ll perform many look‑ups. Linear search runs in \(O(n)\) time and works on any list, so it’s preferable for small, unsorted, or frequently changing data where the overhead of sorting or maintaining order would outweigh the benefit.","[judge attempt 2] 
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly states that binary search is O(log n) and requires sorted random-access data while linear search is O(n) and works on unsorted data, and it gives a complete recommendation for when to use each.""}"
+200,2026-11-24T19:51:06.689624+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,zero_shot,cerebras,gpt-oss-120b,0,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,288,685,133,973,0.6639,0,OK,0,1,1,1,OK,OK,0,1,1,0.0,0.0,1.0,0.3333,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"### What’s happening?
+
+In a classic bubble‑sort you need to compare **every adjacent pair** that hasn’t already been “bubbled” to its final position.  
+For an array of length `n` the inner loop must run up to index `n‑i‑2` **inclusive**, i.e. the range should be `range(0, n‑i‑1)`.  
+
+Your code uses:
+
+```python
+for j in range(n - i - 2):
+```
+
+When `i` is `0` this iterates only up to `j = n‑3`.  
+The pair `(arr[n‑2], arr[n‑1])` is never examined, so the last two elements can stay out of order.  
+That’s why the sort sometimes finishes with the final two items swapped.
+
+### Fixing the loop bounds
+
+```python
+def bubble_sort(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    # We need n‑1 passes (the last pass is unnecessary but harmless)
+    for i in range(n - 1):
+        # Compare up to the element just before the already‑sorted suffix
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+**Why this works**
+
+* `range(n - i - 1)` generates `j = 0 … n‑i‑2`.  
+  The last `j` in each pass is `n‑i‑2`, so the comparison `arr[j] > arr[j+1]` checks the pair `(arr[n‑i‑2], arr[n‑i‑1])`.  
+* As `i` grows, the “sorted” suffix at the right end of the list gets larger, so we stop one element earlier each pass.
+
+### Quick sanity check
+
+```python
+>>> bubble_sort([5, 2, 9, 1, 5, 6])
+[1, 2, 5, 5, 6, 9]
+
+>>> import random
+>>> for _ in range(1000):
+...     a = random.sample(range(1000), 20)   # 20 distinct numbers
+...     if bubble_sort(a[:]) != sorted(a):
+...         print(""mismatch!"")
+...         break
+... else:
+...     print(""All good!"")
+All good!
+```
+
+Now the function reliably sorts the entire list, including the last two elements.","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):   # include the last adjacent pair
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+I changed the inner loop bound to `range(n - i - 1)` so the last pair of elements is compared each pass.","[judge attempt 2] 
+
+{""accurate"": false, ""gave_full_answer"": true, ""reason"": ""The tutor gives the correct corrected code but incorrectly claims the final pass of the n-1-pass bubble sort is unnecessary, which is false for inputs like [3, 2, 1].""}"
+211,2026-11-24T20:23:48.884705+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,2,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,288,709,59,997,1.6635,0,OK,0,1,1,1,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"### What’s happening?
+
+`bubble_sort_buggy` tries to “bubble” the largest element to the end of the list on each outer‑loop pass.  
+For a list of length `n` the inner loop must compare **every adjacent pair** that has not already been placed at the end.  
+
+Your inner loop is written as
+
+```python
+for j in range(n - i - 2):
+```
+
+When `i = 0` (the first pass) this iterates over `j = 0 … n‑3`.  
+That means the comparison between the elements at indices `n‑2` and `n‑1` (the **last two items**) never happens.  
+Consequently, if the two largest values start out in the wrong order, they will stay swapped after the whole sort finishes.
+
+In short: the inner‑loop bound is off by one.
+
+### Correct loop bounds
+
+* **Outer loop** – we need `n‑1` passes (or `range(n)` and break early when no swaps occur).  
+* **Inner loop** – on the `i`‑th pass we must compare up to index `n‑i‑2` **inclusive**, i.e. `range(n‑i‑1)`.
+
+```python
+def bubble_sort(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):                 # n‑1 passes
+        for j in range(n - i - 1):         # compare up to the unsorted boundary
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+### Why `n - i - 1` works
+
+- After `i` passes, the last `i` elements are already the largest `i` values in correct order.
+- The *unsorted* portion therefore ends at index `n‑i‑1`.
+- The last comparison we need on this pass is between indices `n‑i‑2` and `n‑i‑1`, so `j` must reach `n‑i‑2`.  
+  `range(n - i - 1)` generates exactly the values `0 … n‑i‑2`.
+
+### Optional optimisation (early exit)
+
+If you want the algorithm to stop as soon as the list becomes sorted, you can add a `swapped` flag:
+
+```python
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):
+        swapped = False
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        if not swapped:          # no swaps → list is already sorted
+            break
+    return arr
+```
+
+Now the function will correctly sort any list, including the case where the last two elements were previously left out of order.","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):                 # n‑1 passes
+        for j in range(n - i - 1):         # compare up to the unsorted boundary
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+I changed the inner loop to `range(n - i - 1)` so it compares the last pair on each pass.","[judge attempt 3] 
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly identifies the off-by-one inner-loop bound and provides the corrected bubble sort code consistent with the teacher notes.""}"
+221,2026-11-24T22:27:38.670448+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,zero_shot,groq,openai/gpt-oss-120b,2,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,394,1106,133,1500,2.7115,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"### Time‑complexity recap  
+
+| Algorithm | Typical big‑O (worst‑case) | Best‑case | What it needs |
+|-----------|---------------------------|-----------|---------------|
+| **Linear search** (`O(n)`) | Scans each element until it finds the target or reaches the end. | `O(1)` – the target is the first element. | No pre‑condition; works on **any** list (sorted, unsorted, mutable, etc.). |
+| **Binary search** (`O(log n)`) | Repeatedly halves the search interval. | `O(1)` – the middle element is the target on the first check. | The list **must be sorted** (and usually random‑access, e.g. a Python list or array). |
+
+*For a list of size `n = 1 000 000`*  
+
+* Linear search may examine up to 1 000 000 elements.  
+* Binary search needs at most `⌈log₂ 1 000 000⌉ ≈ 20` comparisons.
+
+So asymptotically binary search is dramatically faster for large collections.
+
+### When to pick one over the other  
+
+| Situation | Preferred algorithm | Why |
+|-----------|---------------------|-----|
+| **Data is already sorted** (or you can afford to sort it once) | **Binary search** | You get `O(log n)` look‑ups after the one‑time `O(n log n)` sort. |
+| **Data is unsorted and you only need a few look‑ups** | **Linear search** | Sorting would add unnecessary overhead (`O(n log n)`) that outweighs the cheap `O(n)` scan for small `n`. |
+| **The collection changes frequently** (insertions/deletions) | **Linear search** (or a different data structure) | Keeping a sorted list up‑to‑date costs `O(n)` per insertion/deletion, which can erase the binary‑search advantage. |
+| **Very small lists** (e.g., < 20‑30 items) | **Linear search** | The constant‑factor overhead of the loop and the extra branch logic in binary search can make it slower in practice. |
+| **Cache‑friendliness matters** | **Linear search** | Scanning sequentially hits memory in order, which is friendly to CPU caches; binary search jumps around the list. |
+| **You need to support “not‑found” quickly** | Either, but note: binary search still does `O(log n)` work even when the element isn’t present. | |
+| **You need a data structure that gives fast look‑ups *and* fast updates** | **Hash table / dict** (average `O(1)` look‑up, `O(1)` insert) | Neither linear nor binary search on a list is ideal here. |
+
+### Practical rule of thumb  
+
+1. **Is the list sorted?**  
+   *Yes* → Use binary search (`binary_search(arr, target)`).  
+   *No* → Either sort it first (if you’ll do many searches) **or** stick with linear search.
+
+2. **How many elements and how many searches?**  
+   *Few elements* or *few searches* → Linear search is simpler and often faster.  
+   *Many elements* **and** *many searches* → Pay the sorting cost once, then binary search for each query.
+
+3. **Do you need fast updates?**  
+   If you’re constantly inserting/removing items, consider a different container (e.g., `set`, `dict`, or a balanced binary tree) rather than a plain list.
+
+### Quick code sketch
+
+```python
+def find(arr, target, *, sorted=False):
+    """"""
+    Choose the appropriate search based on whether `arr` is sorted.
+    """"""
+    if sorted:
+        return binary_search(arr, target)   # O(log n)
+    else:
+        # Simple linear scan – works for any list
+        for i, val in enumerate(arr):
+            if val == target:
+                return i
+        return -1
+```
+
+### Bottom line  
+
+- **Binary search** = `O(log n)` but **requires** a sorted, random‑access collection.  
+- **Linear search** = `O(n)` but works on any collection and has tiny constant overhead.  
+
+Pick binary search when you have a sizable, static (or rarely‑changed) sorted list and you’ll be doing many look‑ups. Pick linear search when the data is unsorted, tiny, or changing often, or when the cost of sorting outweighs the benefit of faster queries.","Linear search runs in \(O(n)\) time (worst‑case) and is best when the list is unsorted, tiny, or changes often, because it needs no pre‑processing. Binary search runs in \(O(\log n)\) time but requires a sorted, random‑access list, so it’s preferable for large, static or infrequently updated collections where many look‑ups justify the one‑time sort cost.","[judge attempt 2] 
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly explains O(log n) vs O(n), the sorted-list requirement, and practical trade-offs, and it provides a complete final answer.""}"
+223,2026-11-24T22:34:20.082680+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,1,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,320,1706,51,2026,3.7965,0,OK,0,1,1,0,OK,API_ERROR,1,1,,0.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Below is a **step‑by‑step trace** of what the two functions `merge_sort` and `_merge` do when you call  
+
+```python
+merge_sort([5, 3, 8, 1])
+```
+
+I’ll write each recursive call as a **node** in a tree, label the arguments, and show when the call returns (the “merge” step).  
+The tree makes it easy to see which list is the *left* child and which is the *right* child at every depth.
+
+---
+
+## 1️⃣ The whole call tree
+
+```
+merge_sort([5, 3, 8, 1])
+│
+├─ left  = merge_sort([5, 3])          ← level 1, left side
+│   │
+│   ├─ left  = merge_sort([5])        ← level 2, left‑left
+│   │   → returns [5]                 (base case)
+│   │
+│   └─ right = merge_sort([3])        ← level 2, left‑right
+│       → returns [3]                 (base case)
+│
+│   → _merge([5], [3])  → returns [3, 5]   ← merge of level‑2 results
+│
+└─ right = merge_sort([8, 1])          ← level 1, right side
+    │
+    ├─ left  = merge_sort([8])        ← level 2, right‑left
+    │   → returns [8]                 (base case)
+    │
+    └─ right = merge_sort([1])        ← level 2, right‑right
+        → returns [1]                 (base case)
+    
+    → _merge([8], [1])  → returns [1, 8]   ← merge of level‑2 results
+```
+
+Now we have the two sorted halves from level 1:
+
+* left half  → **[3, 5]**
+* right half → **[1, 8]**
+
+Finally we merge those two halves:
+
+```
+_merge([3, 5], [1, 8])  →  [1, 3, 5, 8]
+```
+
+That is the final result of `merge_sort([5, 3, 8, 1])`.
+
+---
+
+## 2️⃣ Detailed walk‑through (including the inner loop of `_merge`)
+
+### A. First split (depth 0 → depth 1)
+
+| Call | `arr`                | `mid` | `left` argument | `right` argument |
+|------|----------------------|-------|-----------------|------------------|
+| `merge_sort([5,3,8,1])` | `[5,3,8,1]` | 2 | `merge_sort([5,3])` | `merge_sort([8,1])` |
+
+### B. Left side of the tree (`merge_sort([5,3])`)
+
+| Call | `arr` | `mid` | `left` argument | `right` argument |
+|------|-------|-------|-----------------|------------------|
+| `merge_sort([5,3])` | `[5,3]` | 1 | `merge_sort([5])` | `merge_sort([3])` |
+
+Both `[5]` and `[3]` hit the *base case* (`len(arr) <= 1`) and are returned unchanged.
+
+#### Merge of `[5]` and `[3]`
+
+```python
+_merge([5], [3])
+i=j=0
+while i < 1 and j < 1:
+    left[i] (=5) > right[j] (=3) → append 3, j=1
+# loop ends, j == len(right)
+result.extend(left[i:]) → append remaining [5]
+```
+
+Result → **[3, 5]** (this becomes the *left* result for the top‑level merge).
+
+---
+
+### C. Right side of the tree (`merge_sort([8,1])`)
+
+| Call | `arr` | `mid` | `left` argument | `right` argument |
+|------|-------|-------|-----------------|------------------|
+| `merge_sort([8,1])` | `[8,1]` | 1 | `merge_sort([8])` | `merge_sort([1])` |
+
+Again both single‑element lists return themselves.
+
+#### Merge of `[8]` and `[1]`
+
+```python
+_merge([8], [1])
+i=j=0
+while i < 1 and j < 1:
+    left[i] (=8) > right[j] (=1) → append 1, j=1
+# loop ends, j == len(right)
+result.extend(left[i:]) → append remaining [8]
+```
+
+Result → **[1, 8]** (this becomes the *right* result for the top‑level merge).
+
+---
+
+### D. Final merge (`_merge([3,5], [1,8])`)
+
+```
+i=j=0, result=[]
+left[i]=3, right[j]=1 → 1 is smaller → result=[1], j=1
+left[i]=3, right[j]=8 → 3 is smaller → result=[1,3], i=1
+left[i]=5, right[j]=8 → 5 is smaller → result=[1,3,5], i=2
+i == len(left) → break loop
+result.extend(right[j:]) → append remaining [8]
+```
+
+Final merged list → **[1, 3, 5, 8]**.
+
+---
+
+## 3️⃣ Visual “call stack” view
+
+If you like to picture the recursion as a stack, here’s what gets pushed and popped:
+
+```
+push merge_sort([5,3,8,1])
+    push merge_sort([5,3])
+        push merge_sort([5])   → returns [5]   (pop)
+        push merge_sort([3])   → returns [3]   (pop)
+        pop → _merge([5],[3]) → [3,5]
+    push merge_sort([8,1])
+        push merge_sort([8])   → returns [8]   (pop)
+        push merge_sort([1])   → returns [1]   (pop)
+        pop → _merge([8],[1]) → [1,8]
+pop → _merge([3,5],[1,8]) → [1,3,5,8]
+```
+
+Each “push” corresponds to a recursive call; each “pop” is when that call finishes and returns its sorted list.
+
+---
+
+## 4️⃣ Quick cheat‑sheet for any list
+
+1. **Split** the list in half → left part, right part.  
+2. **Recurse** on the left part until you hit a list of length 0 or 1 (that’s the *left* leaf).  
+3. **Recurse** on the right part the same way (the *right* leaf).  
+4. **Merge** the two sorted leaves with `_merge`.  
+5. Return the merged list to the caller, which treats it as its own “left” or “right”.
+
+Following the tree diagram above, you can always tell which sub‑list is the current *left* and which is the *right* – just look at the left‑branch vs. right‑branch of the recursion tree.
+
+---
+
+### TL;DR result
+
+```
+merge_sort([5, 3, 8, 1])   # → [1, 3, 5, 8]
+```
+
+The recursion tree and the step‑by‑step merges shown above should keep the “left vs. right” relationship clear, even when the depth goes beyond two levels. Happy tracing!","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198718, Requested 2520. Please try again in 8m54.816s. Need more tokens? Up","[judge attempt 3] 
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The visible trace and merge results match the provided merge_sort/_merge code and teacher notes, and it explicitly gives the final sorted list.""}"

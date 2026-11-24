@@ -5,5 +5,5 @@
   "judge_provider": "cerebras",
   "judge_prompt_version": "v2_full_module",
   "judge_temperature": 0.0,
-  "rejudged_utc": "2026-11-24T23:26:24.196875+00:00"
+  "rejudged_utc": "2026-11-24T23:53:12.041525+00:00"
 }
