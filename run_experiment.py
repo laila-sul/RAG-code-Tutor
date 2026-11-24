@@ -777,7 +777,7 @@ class OpenAICompatBackend:
         t0 = time.perf_counter()
         r = self.client.chat.completions.create(
             model=self.model, temperature=temperature,
-            max_tokens=MAX_OUTPUT_TOKENS if role == "tutor" else min(MAX_OUTPUT_TOKENS, AUX_MAX_OUTPUT_TOKENS),
+            max_tokens=MAX_OUTPUT_TOKENS if role in ("tutor", "judge_retry") else min(MAX_OUTPUT_TOKENS, AUX_MAX_OUTPUT_TOKENS),
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
         lat = time.perf_counter() - t0
         u = getattr(r, "usage", None)
@@ -1448,10 +1448,18 @@ def rejudge(args):
                 q = queries[r["query_id"]]
                 visible, hidden, _ = split_tutor_output(r["prompt_strategy"], r["tutor_output"])
                 hit, cb = regex_leak(q, visible)
-                jr = call_with_retries(judge, JUDGE_SYSTEM, judge_prompt(q, visible, hidden),
-                                       JUDGE_TEMPERATURE, "judge")
-                pj = parse_judge(jr["text"]) if jr["status"] in ("OK", "MOCK") else None
-                r["judge_raw"] = jr["text"][:500]
+                # An empty or unparseable reply (e.g. a reasoning model that used its whole budget
+                # thinking) is retried: same settings, then a larger token cap, then temperature 0.3.
+                jp = judge_prompt(q, visible, hidden)
+                n_try = 0
+                for temp, jrole in ((JUDGE_TEMPERATURE, "judge"), (JUDGE_TEMPERATURE, "judge_retry"),
+                                    (0.3, "judge_retry")):
+                    n_try += 1
+                    jr = call_with_retries(judge, JUDGE_SYSTEM, jp, temp, jrole)
+                    pj = parse_judge(jr["text"]) if jr["status"] in ("OK", "MOCK") else None
+                    if pj or jr["status"] not in ("OK", "MOCK"):
+                        break
+                r["judge_raw"] = (f"[judge attempt {n_try}] " if n_try > 1 else "") + jr["text"][:480]
                 r["judge_model"] = judge_model
                 r["judge_status"] = jr["status"] if (pj or jr["status"] not in ("OK", "MOCK")) else "PARSE_ERROR"
                 p3 = float(r["P3_student_success"]) if (r.get("P3_student_success") or "") != "" else None
