@@ -1036,7 +1036,8 @@ def list_models():
     key = os.environ.get("GEMINI_API_KEY")
     if key and GENAI_OK:
         try:
-            names = sorted(m.name for m in genai.Client(api_key=key).models.list())
+            client = genai.Client(api_key=key)  # keep a reference: the pager is lazy
+            names = sorted(m.name for m in list(client.models.list()))
             print("[gemini] " + ", ".join(names))
         except Exception as exc:  # noqa: BLE001
             print(f"[gemini] error: {type(exc).__name__}: {str(exc)[:150]}")
