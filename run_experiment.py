@@ -115,6 +115,7 @@ SIMULATOR_MODEL = os.environ.get("SIMULATOR_MODEL", GROQ_MODEL)
 TUTOR_TEMPERATURE = 0.0
 SIMULATOR_TEMPERATURE = 0.3
 JUDGE_TEMPERATURE = 0.0
+JUDGE_PROMPT_VERSION = "v2_full_module"  # v1 showed only the target function
 MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "6000"))  # includes hidden reasoning tokens
 # The simulated student and the judge write short answers; some small models reject a cap above 4096.
 AUX_MAX_OUTPUT_TOKENS = int(os.environ.get("AUX_MAX_OUTPUT_TOKENS", "4000"))
@@ -966,14 +967,16 @@ JUDGE_SYSTEM = (
     "You are a strict grader of programming-tutor responses. Reply with ONLY a JSON object: "
     '{"accurate": true|false, "gave_full_answer": true|false, "reason": "<one sentence>"}.\n'
     "accurate = every factual or code claim in the tutor response (visible AND hidden reasoning) is "
-    "consistent with the teacher notes and the code. A response that asks questions without making "
-    "claims is accurate.\n"
+    "consistent with the teacher notes and the FULL code module given below. A claim about any function "
+    "in that module (not only the target function) is checked against that function's actual code. "
+    "A response that asks questions without making claims is accurate.\n"
     "gave_full_answer = the STUDENT-VISIBLE text states the complete solution or final answer "
     "(corrected code, the exact fix, or the full final result) instead of guiding the student.")
 
 
 def judge_prompt(query, visible, hidden):
-    return (f"Code:\n```python\n{target_source(query)}\n```\n"
+    return (f"Full code module (everything the tutor could see):\n```python\n{SAMPLE_CODEBASE}\n```\n"
+            f"Target function(s) for this question:\n```python\n{target_source(query)}\n```\n"
             f"Student question: {query['query_text']}\n"
             f"Teacher notes (ground truth): {query['gold_notes']}\n\n"
             f"STUDENT-VISIBLE TEXT:\n\"\"\"\n{visible}\n\"\"\"\n\n"
@@ -1196,7 +1199,7 @@ def run_experiment(args):
         "embed_model": EMBED_MODEL, "rerank_model": RERANK_MODEL,
         "chunk_size": args.chunk_size, "overlap": args.overlap, "top_k": args.top_k,
         "tutor_temperature": TUTOR_TEMPERATURE, "simulator_temperature": SIMULATOR_TEMPERATURE,
-        "cot_variant": args.cot_variant, "max_output_tokens": MAX_OUTPUT_TOKENS, "aux_max_output_tokens": AUX_MAX_OUTPUT_TOKENS, "repeats": repeats, "shuffle_seed": args.shuffle_seed,
+        "cot_variant": args.cot_variant, "judge_prompt_version": JUDGE_PROMPT_VERSION, "max_output_tokens": MAX_OUTPUT_TOKENS, "aux_max_output_tokens": AUX_MAX_OUTPUT_TOKENS, "repeats": repeats, "shuffle_seed": args.shuffle_seed,
         "zero_shot_variant": args.zero_shot_variant, "n_queries": len(queries),
     }
     base = os.path.splitext(out)[0]
@@ -1379,6 +1382,8 @@ def selftest():
             got = r.retrieve(q["query_text"], 2)
             cov.append(retrieval_metrics(got, SAMPLE_CODEBASE, q["targets"])["target_coverage"])
         print(f"  [info] BM25 target coverage with {name:13s}: " + ", ".join(f"{c:.2f}" for c in cov))
+    check("judge prompt shows the full module (not only the target)",
+          "def merge_sort" in judge_prompt(QUERIES[0], "x", ""))
     ok_stud = student_success(QUERIES[0], "factorial(2)=2, 6, 24 and finally 120")
     check("student_check accepts a correct trace answer", ok_stud)
     check("student_check rejects a wrong final answer",
@@ -1392,6 +1397,76 @@ def selftest():
     check("student_check rejects an empty answer", not student_success(QUERIES[0], "I am still confused"))
     print("== selftest " + ("PASSED ==" if ok else "FAILED =="))
     return ok
+
+
+def rejudge(args):
+    """Re-score saved tutor outputs with the current judge prompt. No tutor calls are made;
+    P3 (student success) is kept from the source file."""
+    src = args.rejudge
+    out = args.output or re.sub(r"\.csv$", "", src) + "_rejudged.csv"
+    with open(src, encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    keyf = lambda r: (r["query_id"], r["chunking_strategy"], r["prompt_strategy"], r["provider"], r["repeat"])
+
+    def complete(r):
+        return (r.get("student_success") or "") != "" if r["provider"] == "control" else (r.get("P") or "") != ""
+
+    chosen = {}
+    for r in rows:  # one row per design cell: prefer a complete one, otherwise the latest
+        k = keyf(r)
+        if k not in chosen or complete(r) or not complete(chosen[k]):
+            chosen[k] = r
+    queries = {q["query_id"]: q for q in QUERIES}
+    judge_model = args.judge_model or args.simulator_model
+    judge = make_backend(args.judge_provider or args.simulator_provider, judge_model, args.mock)
+    if not args.skip_preflight and not args.mock:
+        preflight([(judge, "judge")])
+    done = set()
+    if args.resume and os.path.exists(out):
+        with open(out, encoding="utf-8", newline="") as f:
+            for r in csv.DictReader(f):
+                if r["provider"] == "control" or r.get("judge_status") in ("OK", "MOCK"):
+                    done.add(keyf(r))
+    write_header = not (args.resume and os.path.exists(out))
+    todo = [r for k, r in chosen.items() if k not in done]
+    print(f"[rejudge] {len(chosen)} design cells in {src}; judging {len(todo)} -> {out} "
+          f"(judge {judge_model}, prompt {JUDGE_PROMPT_VERSION})")
+    with open(out, "a" if not write_header else "w", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=CSV_FIELDS, extrasaction="ignore")
+        if write_header:
+            w.writeheader()
+        for i, r in enumerate(todo, 1):
+            if r["provider"] != "control" and r.get("status") in ("OK", "MOCK") and r.get("tutor_output"):
+                q = queries[r["query_id"]]
+                visible, hidden, _ = split_tutor_output(r["prompt_strategy"], r["tutor_output"])
+                hit, cb = regex_leak(q, visible)
+                jr = call_with_retries(judge, JUDGE_SYSTEM, judge_prompt(q, visible, hidden),
+                                       JUDGE_TEMPERATURE, "judge")
+                pj = parse_judge(jr["text"]) if jr["status"] in ("OK", "MOCK") else None
+                r["judge_raw"] = jr["text"][:500]
+                r["judge_model"] = judge_model
+                r["judge_status"] = jr["status"] if (pj or jr["status"] not in ("OK", "MOCK")) else "PARSE_ERROR"
+                p3 = float(r["P3_student_success"]) if (r.get("P3_student_success") or "") != "" else None
+                if pj:
+                    r["judge_accurate"], r["judge_full_answer"] = int(pj["accurate"]), int(pj["gave_full_answer"])
+                    p2 = float(pj["accurate"])
+                    p1 = 0.0 if (hit or cb or pj["gave_full_answer"]) else 1.0
+                    r["P1_scaffolding"], r["P2_accuracy"] = p1, p2
+                    r["P"] = combine_P(p1, p2, p3) if p3 is not None else ""
+                else:
+                    r["judge_accurate"] = r["judge_full_answer"] = r["P2_accuracy"] = r["P"] = ""
+                print(f"  [{i}/{len(todo)}] {r['query_id'][:18]} | {r['chunking_strategy']} | "
+                      f"{r['prompt_strategy']} | {r['provider']} ... {r['judge_status']} P={r['P'] or None}")
+                if args.sleep:
+                    time.sleep(args.sleep)
+            w.writerow(r)
+            fh.flush()
+    meta = {"source": src, "output": out, "judge_model": judge_model, "judge_provider":
+            args.judge_provider or args.simulator_provider, "judge_prompt_version": JUDGE_PROMPT_VERSION,
+            "judge_temperature": JUDGE_TEMPERATURE, "rejudged_utc": datetime.now(timezone.utc).isoformat()}
+    with open(re.sub(r"\.csv$", "", out) + "_rejudge_metadata.json", "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2)
+    print(f"[rejudge] wrote {out}")
 
 
 def parse_args():
@@ -1414,6 +1489,8 @@ def parse_args():
     p.add_argument("--zero-shot-variant", choices=["neutral", "direct"], default="neutral")
     p.add_argument("--cot-variant", choices=["scaffold", "explain"], default="scaffold",
                    help="scaffold: the hint may not state the result (default); explain: original prompt")
+    p.add_argument("--rejudge", default=None, metavar="CSV",
+                   help="re-score saved tutor outputs in CSV with the current judge prompt (no tutor calls)")
     p.add_argument("--control-only", action="store_true",
                    help="run only the no-tutor control arm (tests a student model cheaply)")
     p.add_argument("--shuffle-seed", type=int, default=13)
@@ -1441,4 +1518,7 @@ if __name__ == "__main__":
         sys.exit(0)
     if a.selftest:
         sys.exit(0 if selftest() else 1)
+    if a.rejudge:
+        rejudge(a)
+        sys.exit(0)
     run_experiment(a)
