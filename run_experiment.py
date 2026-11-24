@@ -1335,6 +1335,14 @@ def export_validation_sample(path, n):
     rows = []
     with open(path, encoding="utf-8", newline="") as f:
         rows = [r for r in csv.DictReader(f) if r["status"] in ("OK", "MOCK")]
+    # Annotate only scored tutor responses: no control rows (they have no tutor text), no rows whose
+    # judge/student step failed, and one row per design cell (a resumed run can repeat a cell).
+    cells = {}
+    for r in rows:
+        if r.get("provider") == "control" or not r.get("tutor_output") or (r.get("P") or "") == "":
+            continue
+        cells[(r["query_id"], r["chunking_strategy"], r["prompt_strategy"], r["provider"], r["repeat"])] = r
+    rows = list(cells.values())
     if not rows or n <= 0:
         return
     random.Random(7).shuffle(rows)
@@ -1489,6 +1497,8 @@ def parse_args():
     p.add_argument("--zero-shot-variant", choices=["neutral", "direct"], default="neutral")
     p.add_argument("--cot-variant", choices=["scaffold", "explain"], default="scaffold",
                    help="scaffold: the hint may not state the result (default); explain: original prompt")
+    p.add_argument("--validation-sample-from", default=None, metavar="CSV",
+                   help="(re)write the human validation sample from a finished results CSV (no API calls)")
     p.add_argument("--rejudge", default=None, metavar="CSV",
                    help="re-score saved tutor outputs in CSV with the current judge prompt (no tutor calls)")
     p.add_argument("--control-only", action="store_true",
@@ -1520,5 +1530,8 @@ if __name__ == "__main__":
         sys.exit(0 if selftest() else 1)
     if a.rejudge:
         rejudge(a)
+        sys.exit(0)
+    if a.validation_sample_from:
+        export_validation_sample(a.validation_sample_from, a.validation_n)
         sys.exit(0)
     run_experiment(a)
