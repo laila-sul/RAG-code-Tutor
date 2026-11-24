@@ -1,5 +1,5 @@
 {
-  "started_utc": "2026-11-24T20:23:47.211087+00:00",
+  "started_utc": "2026-11-24T21:48:38.227443+00:00",
   "python": "3.14.2 (tags/v3.14.2:df79316, Dec  5 2025, 17:18:21) [MSC v.1944 64 bit (AMD64)]",
   "platform": "Windows-10-10.0.19045-SP0",
   "mock": false,
@@ -25,6 +25,7 @@
   "tutor_temperature": 0.0,
   "simulator_temperature": 0.3,
   "cot_variant": "scaffold",
+  "judge_prompt_version": "v2_full_module",
   "max_output_tokens": 6000,
   "aux_max_output_tokens": 4000,
   "repeats": 3,

@@ -12402,3 +12402,1035 @@ Can you write down the pair of sub‑lists that `merge_sort` receives when it pr
 3. Merge `[3,5]` and `[1,8]` → `[1,3,5,8]`
 
 So the final sorted list is **`[1, 3, 5, 8]`**.","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198809, Requested 1522. Please try again in 2m22.992s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+215,2026-11-24T21:48:42.434585+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,zero_shot,groq,openai/gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,422,1923,75,2345,4.1905,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"Below is a **step‑by‑step walk‑through** of the `merge_sort` function on the input  
+
+```python
+arr = [5, 3, 8, 1]
+```
+
+The implementation you have is the classic recursive version:
+
+```python
+def merge_sort(arr):
+    """"""Classic recursive divide-and-conquer merge sort.""""""
+    if len(arr) <= 1:                 # base case
+        return arr
+    mid = len(arr) // 2                # split point
+    left  = merge_sort(arr[:mid])      # recurse on the left half
+    right = merge_sort(arr[mid:])      # recurse on the right half
+    return _merge(left, right)         # merge the two sorted halves
+```
+
+and the helper that actually merges two sorted lists:
+
+```python
+def _merge(left, right):
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            result.append(right[j]); j += 1
+    result.extend(left[i:])   # any leftovers
+    result.extend(right[j:])
+    return result
+```
+
+---
+
+## 1️⃣  The recursion tree (who is “left”, who is “right”)
+
+| Level | Call (argument)                | `mid` | `arr[:mid]` (left) | `arr[mid:]` (right) |
+|------|--------------------------------|------|-------------------|---------------------|
+| 0    | `merge_sort([5, 3, 8, 1])`     | 2    | **[5, 3]**        | **[8, 1]**          |
+| 1    | `merge_sort([5, 3])`           | 1    | **[5]**           | **[3]**             |
+| 2    | `merge_sort([5])` → base case  | –    | –                 | –                   |
+| 2    | `merge_sort([3])` → base case  | –    | –                 | –                   |
+| 1    | `merge_sort([8, 1])`           | 1    | **[8]**           | **[1]**             |
+| 2    | `merge_sort([8])` → base case  | –    | –                 | –                   |
+| 2    | `merge_sort([1])` → base case  | –    | –                 | –                   |
+
+*Notice how the **left** sub‑list is always the slice `arr[:mid]` (the first half) and the **right** sub‑list is `arr[mid:]` (the second half).*  
+When the list length is 2, `mid` becomes `1`, so each half contains exactly one element.
+
+---
+
+## 2️⃣  Bottom‑up merging (the “return” phase)
+
+Now we unwind the recursion, merging the already‑sorted sub‑lists.
+
+### a) Merge `[5]` and `[3]`
+
+```python
+_merge([5], [3])
+# compare 5 vs 3 → 3 is smaller → result = [3]
+# left still has 5, right is exhausted → append remaining left
+# final result = [3, 5]
+```
+
+**Result:** `left = [3, 5]` (this becomes the sorted version of the original left half `[5,3]`).
+
+### b) Merge `[8]` and `[1]`
+
+```python
+_merge([8], [1])
+# compare 8 vs 1 → 1 is smaller → result = [1]
+# right exhausted, append remaining left 8
+# final result = [1, 8]
+```
+
+**Result:** `right = [1, 8]` (sorted version of the original right half `[8,1]`).
+
+### c) Merge the two sorted halves `[3,5]` and `[1,8]`
+
+```python
+_merge([3,5], [1,8])
+# compare 3 vs 1 → 1 smaller → result = [1]; j+=1
+# compare 3 vs 8 → 3 smaller → result = [1,3]; i+=1
+# compare 5 vs 8 → 5 smaller → result = [1,3,5]; i+=1
+# left exhausted, append remaining right (8)
+# final result = [1,3,5,8]
+```
+
+**Result:** the whole list is now sorted.
+
+---
+
+## 3️⃣  Full trace with return values
+
+Below is the exact order in which the interpreter calls and returns from `merge_sort` (including the intermediate `_merge` calls).  
+I added line numbers for clarity; they are **not** in the source code, just for the trace.
+
+```
+0: merge_sort([5, 3, 8, 1])
+   mid = 2
+   left  = merge_sort([5, 3])          # → step 1
+   right = merge_sort([8, 1])          # → step 4
+   return _merge(left, right)          # → step 7
+
+1: merge_sort([5, 3])
+   mid = 1
+   left  = merge_sort([5])             # → step 2
+   right = merge_sort([3])             # → step 3
+   return _merge(left, right)          # → step 5
+
+2: merge_sort([5]) → base case → returns [5]
+
+3: merge_sort([3]) → base case → returns [3]
+
+5: _merge([5], [3]) → returns [3, 5]   # left half sorted
+
+4: merge_sort([8, 1])
+   mid = 1
+   left  = merge_sort([8])             # → step 6
+   right = merge_sort([1])             # → step 7
+   return _merge(left, right)          # → step 8
+
+6: merge_sort([8]) → base case → returns [8]
+
+7: merge_sort([1]) → base case → returns [1]
+
+8: _merge([8], [1]) → returns [1, 8]   # right half sorted
+
+7: _merge([3, 5], [1, 8]) → returns [1, 3, 5, 8]   # final result
+```
+
+---
+
+## 4️⃣  Quick visual of the recursion tree
+
+```
+                [5,3,8,1]
+               /          \
+          [5,3]            [8,1]
+          /   \            /   \
+        [5]   [3]        [8]   [1]
+         |     |          |     |
+        [5]   [3]        [8]   [1]   ← base cases
+          \   /            \   /
+        [3,5]              [1,8]   ← first merges
+               \          /
+                [1,3,5,8]   ← final merge
+```
+
+---
+
+## 5️⃣  Take‑away tips for hand‑tracing
+
+1. **Write the split at each level** – a simple table (like the one in section 1) helps you keep track of which slice is “left” and which is “right”.
+2. **Label the recursion depth** (0, 1, 2…) so you know when you’re going *down* (splitting) versus *up* (merging).
+3. **When you hit a length‑1 list, write down the value immediately** – those are the leaves of the tree and will be the inputs to the first merges.
+4. **Merge step** – always compare the *first* (i.e., index 0) element of each list; after you take one element, move the pointer (`i` or `j`) forward. It’s easy to draw two columns and tick off the element you consume.
+5. **Result propagation** – the list returned by a `_merge` call becomes the “left” or “right” argument for the next higher level.
+
+---
+
+### Final answer
+
+`merge_sort([5, 3, 8, 1])` evaluates to
+
+```python
+[1, 3, 5, 8]
+```
+
+and the detailed trace above shows exactly which sub‑list is considered “left” and which is “right” at every recursion depth. Feel free to copy the table or the tree diagram onto paper; it makes the hand‑trace much less confusing. Happy sorting!","**Recursion levels (left / right slices)**  
+
+| Level | Call argument | `mid` | **Left** | **Right** |
+|-------|---------------|-------|----------|-----------|
+| 0 | `merge_sort([5, 3, 8, 1])` | 2 | `[5, 3]` | `[8, 1]` |
+| 1‑a | `merge_sort([5, 3])` | 1 | `[5]` | `[3]` |
+| 1‑b | `merge_sort([8, 1])` | 1 | `[8]` | `[1]` |
+| 2‑a | `merge_sort([5])` | – | – | – (base case) |
+| 2‑b | `merge_sort([3])` | – | – | – (base case) |
+| 2‑c | `merge_sort([8])` | – | – | – (base case) |
+| 2‑d | `merge_sort([1])` | – | – | – (base case) |
+
+**Merging (return phase)**  
+
+1. `_merge([5], [3])` → `[3, 5]`  
+2. `_merge([8], [1])` → `[1, 8]`  
+3. `_merge([3, 5], [1, 8])` → `[1, 3, 5, 8]`
+
+**Final merged list**
+
+```
+[1, 3, 5, 8]
+```
+","{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor's step-by-step trace of merge_sort([5, 3, 8, 1]) is factually correct and consistent with the provided code and teacher notes, and it explicitly states the final result [1, 3, 5, 8].""}"
+217,2026-11-24T21:48:49.479228+00:00,Q1_callstack_factorial,call_stack_tracing,tracing,1,fixed_size,zero_shot,groq,openai/gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:0:C0-500"", ""fixed:4:C1800-2244""]",982,1.0,1,385,1390,59,1775,3.242,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"Sure! Let’s walk through the execution of the recursive `factorial` function for the input `5` and see exactly how the call stack is built and then unwound, performing the multiplications.
+
+```python
+def factorial(n):
+    """"""Recursive factorial. Base case n <= 1.""""""
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+```
+
+### 1. What the call stack looks like while we *go down* (the “recursive descent”)
+
+When a function calls itself, a **new stack frame** is pushed onto the call stack.  
+Each frame remembers:
+
+* the value of `n` for that call,
+* where it should return to (the line after the `return` statement).
+
+Below is the sequence of frames that get pushed, from the first call to the deepest one:
+
+| Stack depth (top = most recent) | `n` value in this frame | What the frame will do when it returns |
+|---------------------------------|------------------------|----------------------------------------|
+| 1 (bottom)                      | `5`                    | `return 5 * result_of_factorial(4)`   |
+| 2                               | `4`                    | `return 4 * result_of_factorial(3)`   |
+| 3                               | `3`                    | `return 3 * result_of_factorial(2)`   |
+| 4                               | `2`                    | `return 2 * result_of_factorial(1)`   |
+| 5 (top)                         | `1`                    | **Base case** → returns `1`           |
+
+Visually (most‑recent on top):
+
+```
++-------------------+
+| factorial(1) -> 1|   <-- top of stack
++-------------------+
+| factorial(2)      |
++-------------------+
+| factorial(3)      |
++-------------------+
+| factorial(4)      |
++-------------------+
+| factorial(5)      |
++-------------------+   <-- bottom of stack (original call)
+```
+
+### 2. The *unwinding* phase – where the multiplication actually happens
+
+Now that the base case has been hit, the function starts returning values. Each return pops the top frame, substitutes the returned value into the pending multiplication, and then returns the new result to the next frame down.
+
+Let’s follow the steps:
+
+| Step | Returning from | Value returned | What the caller does next |
+|------|----------------|----------------|---------------------------|
+| A    | `factorial(1)` | `1`            | `factorial(2)` computes `2 * 1` |
+| B    | `factorial(2)` | `2 * 1 = 2`    | `factorial(3)` computes `3 * 2` |
+| C    | `factorial(3)` | `3 * 2 = 6`    | `factorial(4)` computes `4 * 6` |
+| D    | `factorial(4)` | `4 * 6 = 24`   | `factorial(5)` computes `5 * 24` |
+| E    | `factorial(5)` | `5 * 24 = 120` | final result returned to the caller (e.g., `print`) |
+
+If we write it out as the actual Python evaluation order, it looks like this:
+
+```
+factorial(5)
+→ 5 * factorial(4)
+   → 4 * factorial(3)
+      → 3 * factorial(2)
+         → 2 * factorial(1)
+            → 1               # base case
+         → 2 * 1 = 2
+      → 3 * 2 = 6
+   → 4 * 6 = 24
+→ 5 * 24 = 120
+```
+
+### 3. Visualizing the stack changes
+
+You can think of the stack as a “to‑do list” that gets filled as we go deeper, then executed as we come back up:
+
+```
+# Going down (push)
+push factorial(5)
+push factorial(4)
+push factorial(3)
+push factorial(2)
+push factorial(1)   # base case, no further push
+
+# Coming up (pop + compute)
+pop factorial(1) → returns 1
+pop factorial(2) → computes 2 * 1 = 2
+pop factorial(3) → computes 3 * 2 = 6
+pop factorial(4) → computes 4 * 6 = 24
+pop factorial(5) → computes 5 * 24 = 120
+```
+
+### 4. Quick Python‑style trace (optional)
+
+If you want to see this in action, you can add a tiny print statement:
+
+```python
+def factorial(n, depth=0):
+    print(""  "" * depth + f""enter factorial({n})"")
+    if n <= 1:
+        print(""  "" * depth + ""base case → return 1"")
+        return 1
+    result = n * factorial(n-1, depth+1)
+    print(""  "" * depth + f""return {n} * result_of_{n-1} = {result}"")
+    return result
+
+factorial(5)
+```
+
+Output:
+
+```
+enter factorial(5)
+  enter factorial(4)
+    enter factorial(3)
+      enter factorial(2)
+        enter factorial(1)
+        base case → return 1
+      return 2 * result_of_1 = 2
+    return 3 * result_of_2 = 6
+  return 4 * result_of_3 = 24
+return 5 * result_of_4 = 120
+```
+
+The indentation shows the stack depth, and you can see exactly when each multiplication occurs (on the way back up).
+
+---
+
+**Bottom line:**  
+- The recursive *descent* builds a stack of pending multiplications.  
+- The *base case* returns `1`.  
+- As each frame is popped, it multiplies its own `n` by the value returned from the deeper call, propagating the product upward until the original call finally returns `120`.  
+
+Hope that clears up how the call stack drives the multiplication! Let me know if you’d like to see a similar trace for another function.","On the way back up the calls return these values:
+
+- `factorial(1)` → **1**  
+- `factorial(2)` → **2** (because 2 × 1)  
+- `factorial(3)` → **6** (3 × 2)  
+- `factorial(4)` → **24** (4 × 6)  
+- `factorial(5)` → **120** (5 × 24)
+
+So the final result of `factorial(5)` is **120**.","{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor response correctly traces the call stack and unwinding for factorial(5), matching the teacher notes and code exactly, and provides the complete final result (120) with detailed step-by-step explanations.""}"
+221,2026-11-24T21:48:56.118377+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,zero_shot,groq,openai/gpt-oss-120b,2,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,394,1300,133,1694,3.0314,0,OK,0,1,1,0,API_ERROR,API_ERROR,,,,0.0,,,,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"### Time‑complexity recap  
+
+| Algorithm | Typical big‑O (worst‑case) | Best‑case | What it needs |
+|-----------|----------------------------|-----------|----------------|
+| **Linear search** (`O(n)`) | Scans each element until it finds the target or reaches the end. | `O(1)` – the target is the first element. | No ordering requirement; works on any iterable. |
+| **Binary search** (`O(log n)`) | Repeatedly halves the search interval. | `O(1)` – the middle element is the target on the first check. | The collection **must be sorted** (and usually random‑access, e.g. a Python list). |
+
+#### Why the difference matters  
+
+* **Growth rate** – As the list size `n` grows, `log₂ n` grows much more slowly than `n`.  
+  * For `n = 1 000 000` a linear scan may examine up to a million elements, while binary search needs at most `⌈log₂ 1 000 000⌉ ≈ 20` comparisons.  
+* **Constant factors** – Linear search has a tiny constant overhead (just a single loop and a comparison). Binary search does a few extra operations each iteration (computing the midpoint, two index calculations, a branch). For very tiny lists (e.g., `n ≤ 10`) the constant overhead can make binary search *slightly* slower in practice.
+
+### When to pick one over the other  
+
+| Situation | Preferred algorithm | Reason |
+|-----------|---------------------|--------|
+| **Data is unsorted** (or you cannot afford to sort it) | **Linear search** | Sorting would be `O(n log n)` just to enable binary search, which is wasteful if you only need a single lookup. |
+| **You need a one‑off lookup on a small list** | **Linear search** | Simpler code, negligible performance difference. |
+| **The list is already sorted** (e.g., a database index, a pre‑computed table, a configuration file) | **Binary search** | You get `O(log n)` lookups without extra work. |
+| **You will perform many lookups on a static sorted collection** | **Binary search** (or even a more advanced structure like a balanced tree or hash table) | The `log n` cost per lookup compounds; the initial sort cost is amortized over many searches. |
+| **The collection changes frequently** (insertions/deletions) and you cannot keep it sorted efficiently | **Linear search** (or a hash‑based structure) | Maintaining sorted order after each mutation can be expensive (`O(n)` per insert). |
+| **Cache‑friendliness matters** (e.g., tight inner loops on large arrays) | **Linear search** can be faster for moderate `n` because it accesses memory sequentially, which is very cache‑friendly. Binary search jumps around the array, causing more cache misses. | |
+| **You need to find the *first* occurrence in a list that may contain duplicates** | **Linear search** (or a modified binary search that continues leftward) | A plain binary search returns *some* matching index; extra work is needed to locate the first one. |
+
+### Practical rule of thumb  
+
+1. **Is the data sorted?**  
+   *Yes* → Use binary search (or a more specialized structure).  
+   *No* → Either keep it unsorted and use linear search, or sort it once if you’ll do many lookups.
+
+2. **How many elements?**  
+   *Very few* (≤ 10‑20) → Linear search is fine; the simplicity outweighs the theoretical speed gain.  
+   *Thousands or more* → Binary search will usually win, provided the data is sorted.
+
+3. **How often does the data change?**  
+   *Frequent mutations* → Linear search (or a hash table) may be cheaper overall.  
+   *Mostly read‑only* → Sort once, then binary search repeatedly.
+
+### Quick code sketch (from the retrieved context)
+
+```python
+def binary_search(arr, target):
+    """"""Iterative binary search over a sorted list. Returns index or -1.""""""
+    low, high = 0, len(arr) - 1
+    while low <= high:
+        mid = (low + high) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            low = mid + 1
+        else:
+            high = mid - 1
+    return -1
+```
+
+```python
+def linear_search(arr, target):
+    """"""Simple linear search. Returns index or -1.""""""
+    for i, val in enumerate(arr):
+        if val == target:
+            return i
+    return -1
+```
+
+Both functions return the index of the first matching element they encounter, but the binary version assumes `arr` is already sorted.
+
+### Bottom line  
+
+- **Binary search = `O(log n)`** but requires a sorted, random‑access collection.  
+- **Linear search = `O(n)`** works on any collection and has minimal overhead.  
+
+Choose the one that matches the state of your data and the frequency of lookups. If you can afford to keep the data sorted (or it’s naturally sorted) and you’ll search many times, binary search is the clear winner. If the list is tiny, unsorted, or constantly changing, a plain linear scan is often the simpler and faster practical choice.","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198841, Requested 2108. Please try again in 6m49.968s. Need more tokens? Up","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198585, Requested 2321. Please try again in 6m31.392s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+222,2026-11-24T21:53:20.956022+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,zero_shot,cerebras,gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,422,1512,71,1934,1.1116,0,OK,0,1,1,0,API_ERROR,API_ERROR,,,,0.0,,,,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"Below is a **step‑by‑step walk‑through** of the `merge_sort` function as it runs on the list  
+
+```python
+arr = [5, 3, 8, 1]
+```
+
+The implementation you have is the classic recursive version:
+
+```python
+def merge_sort(arr):
+    if len(arr) <= 1:                # base case
+        return arr
+    mid = len(arr) // 2
+    left  = merge_sort(arr[:mid])    # left half  (indices 0 … mid‑1)
+    right = merge_sort(arr[mid:])    # right half (indices mid … end)
+    return _merge(left, right)
+
+def _merge(left, right):
+    # merges two already‑sorted lists into a new sorted list
+    …
+```
+
+The only thing that changes from call to call is the **slice** you give to the recursive calls:
+
+* `arr[:mid]` → the *left* sub‑list (the first half)
+* `arr[mid:]` → the *right* sub‑list (the second half)
+
+Because the function calls itself **twice** (`left = …` and `right = …`), the recursion builds a binary tree.  
+Let’s draw that tree and label every node with the sub‑list it receives.
+
+---
+
+## 1️⃣  First (top‑level) call  
+
+```
+merge_sort([5, 3, 8, 1])
+```
+
+* `mid = 4 // 2 = 2`
+* **left**  = `merge_sort([5, 3])`
+* **right** = `merge_sort([8, 1])`
+
+---
+
+## 2️⃣  Second level – left branch  
+
+```
+merge_sort([5, 3])
+```
+
+* `mid = 2 // 2 = 1`
+* **left**  = `merge_sort([5])`
+* **right** = `merge_sort([3])`
+
+### 2️⃣  Second level – right branch  
+
+```
+merge_sort([8, 1])
+```
+
+* `mid = 2 // 2 = 1`
+* **left**  = `merge_sort([8])`
+* **right** = `merge_sort([1])`
+
+---
+
+## 3️⃣  Third level – the base cases (lists of length 1)  
+
+All four calls below hit the base case (`len(arr) <= 1`) and return immediately:
+
+```
+merge_sort([5]) → [5]
+merge_sort([3]) → [3]
+merge_sort([8]) → [8]
+merge_sort([1]) → [1]
+```
+
+At this point the recursion starts **unwinding** and the `_merge` function is invoked for each pair of results.
+
+---
+
+## 4️⃣  Fourth level – first merges (pairwise)  
+
+### Merge the two 1‑element lists that came from the left side of the original array:
+
+```python
+_merge([5], [3])
+```
+
+* Compare 5 vs 3 → 3 is smaller → result = [3]
+* Left list still has 5 → append it → result = [3, 5]
+
+**Result:** `[3, 5]` (this becomes the *sorted left* half of the original array)
+
+### Merge the two 1‑element lists that came from the right side of the original array:
+
+```python
+_merge([8], [1])
+```
+
+* Compare 8 vs 1 → 1 is smaller → result = [1]
+* Right list still has 8 → append it → result = [1, 8]
+
+**Result:** `[1, 8]` (this becomes the *sorted right* half of the original array)
+
+---
+
+## 5️⃣  Fifth level – final merge (top‑level)  
+
+Now the top‑level call receives the two sorted halves:
+
+```python
+_merge([3, 5], [1, 8])
+```
+
+Step‑by‑step:
+
+| i (left) | j (right) | left[i] | right[j] | action | result so far |
+|----------|-----------|---------|----------|--------|---------------|
+| 0        | 0         | 3       | 1        | 1 < 3 → take 1 | [1] |
+| 0        | 1         | 3       | 8        | 3 ≤ 8 → take 3 | [1, 3] |
+| 1        | 1         | 5       | 8        | 5 ≤ 8 → take 5 | [1, 3, 5] |
+| 2 (exhausted) | 1   | –       | 8        | left exhausted → extend remaining right | [1, 3, 5, 8] |
+
+**Result:** `[1, 3, 5, 8]`
+
+---
+
+## 📋 Full recursion tree (with results)
+
+```
+                [5,3,8,1]
+               /          \
+          [5,3]            [8,1]
+         /     \          /     \
+      [5]     [3]      [8]     [1]
+       |       |        |       |
+      [5]     [3]      [8]     [1]   ← base cases
+       \       /        \       /
+        \     /          \     /
+         [3,5]            [1,8]   ← merges at level 4
+               \        /
+                \      /
+                 [1,3,5,8]   ← final merge
+```
+
+---
+
+## How to keep track while you “hand‑trace”
+
+1. **Write the slice next to each call** – e.g. `merge_sort([5, 3])` → “left = arr[:1] = [5]”, “right = arr[1:] = [3]”.
+2. **Label the recursion depth** (level 1, level 2, …) so you know which calls belong together.
+3. **When a call returns**, immediately write the returned list next to it; that makes the subsequent merge obvious.
+4. **Draw a small tree** (as above) on paper; each node is a call, each leaf is a base case, and each internal node shows the result of merging its two children.
+
+Following those steps, you’ll never lose which sub‑list is “left” or “right”, even for deeper recursions.
+
+---
+
+### TL;DR – Result
+
+`merge_sort([5, 3, 8, 1])` evaluates to
+
+```python
+[1, 3, 5, 8]
+```
+
+and the trace above shows exactly how the left/right halves are created and merged at every recursion level. Happy debugging!","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198229, Requested 2037. Please try again in 1m54.912s. Need more tokens? Up","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 197972, Requested 2844. Please try again in 5m52.512s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+223,2026-11-24T21:57:48.308463+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,1,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,320,1670,51,1990,4.0125,0,OK,0,1,1,0,API_ERROR,OK,,,1,0.0,,1.0,,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"Below is a **step‑by‑step trace** of what the two functions `merge_sort` and `_merge` do when you call  
+
+```python
+merge_sort([5, 3, 8, 1])
+```
+
+I’ll write each recursive call as a **node** in a tree, label the arguments, and show when the call returns (the “merge” step).  
+The tree makes it easy to see which list is the *left* child and which is the *right* child at every depth.
+
+---
+
+## 1️⃣ The whole call tree
+
+```
+merge_sort([5, 3, 8, 1])
+│
+├─ merge_sort([5, 3])          ← left
+│   ├─ merge_sort([5])         ← left‑left   (base case)
+│   └─ merge_sort([3])         ← left‑right  (base case)
+│   └─ _merge([5], [3]) → [3, 5]
+│
+└─ merge_sort([8, 1])          ← right
+    ├─ merge_sort([8])         ← right‑left  (base case)
+    └─ merge_sort([1])         ← right‑right (base case)
+    └─ _merge([8], [1]) → [1, 8]
+    └─ _merge([3, 5], [1, 8]) → [1, 3, 5, 8]
+```
+
+That picture already tells you the *left/right* relationship, but let’s walk through it line‑by‑line so you can follow the exact order of operations.
+
+---
+
+## 2️⃣ Detailed execution order
+
+| Step | Function call (argument) | What happens inside the call | Result returned |
+|------|--------------------------|------------------------------|-----------------|
+| 1 | `merge_sort([5, 3, 8, 1])` | `mid = 2` → split into **left** = `[5, 3]` and **right** = `[8, 1]` | – |
+| 2 | `merge_sort([5, 3])` (left of step 1) | `mid = 1` → split into **left** = `[5]` and **right** = `[3]` | – |
+| 3 | `merge_sort([5])` (left of step 2) | Length ≤ 1 → **base case** → returns `[5]` | `[5]` |
+| 4 | `merge_sort([3])` (right of step 2) | Length ≤ 1 → **base case** → returns `[3]` | `[3]` |
+| 5 | `_merge([5], [3])` (merge result of step 2) | Compare 5 vs 3 → pick 3, then 5 → result `[3, 5]` | `[3, 5]` |
+| 6 | `merge_sort([8, 1])` (right of step 1) | `mid = 1` → split into **left** = `[8]` and **right** = `[1]` | – |
+| 7 | `merge_sort([8])` (left of step 6) | Base case → returns `[8]` | `[8]` |
+| 8 | `merge_sort([1])` (right of step 6) | Base case → returns `[1]` | `[1]` |
+| 9 | `_merge([8], [1])` (merge result of step 6) | Compare 8 vs 1 → pick 1, then 8 → result `[1, 8]` | `[1, 8]` |
+|10 | `_merge([3, 5], [1, 8])` (final merge, left result from step 5, right result from step 9) | 1 < 3 → pick 1 → result `[1]`<br>3 < 8 → pick 3 → `[1, 3]`<br>5 < 8 → pick 5 → `[1, 3, 5]`<br>left list exhausted → extend remaining right `[8]` → final `[1, 3, 5, 8]` | `[1, 3, 5, 8]` |
+
+The **final return value** of the original call (step 1) is the list produced in step 10:  
+
+```python
+[1, 3, 5, 8]
+```
+
+---
+
+## 3️⃣ Visual “stack” view (what the interpreter sees)
+
+When Python executes the recursion, it pushes frames onto the call stack. Below is the stack **just before each merge**:
+
+1. **Before step 5** (merging `[5]` and `[3]`)
+
+```
+merge_sort([5, 3, 8, 1])   ← waiting for left result
+merge_sort([5, 3])         ← waiting for its left & right results
+merge_sort([5])            ← returned [5]
+merge_sort([3])            ← returned [3]
+```
+
+2. **Before step 9** (merging `[8]` and `[1]`)
+
+```
+merge_sort([5, 3, 8, 1])   ← waiting for right result
+merge_sort([8, 1])         ← waiting for its left & right results
+merge_sort([8])            ← returned [8]
+merge_sort([1])            ← returned [1]
+```
+
+3. **Before step 10** (final merge)
+
+```
+merge_sort([5, 3, 8, 1])   ← waiting for both halves
+← left half already resolved → [3, 5]
+← right half already resolved → [1, 8]
+```
+
+When the stack empties (all frames popped), you get the final sorted list.
+
+---
+
+## 4️⃣ Quick cheat‑sheet for any list
+
+1. **Split**: `mid = len(arr)//2`.  
+   - Everything *before* `mid` is the **left** sub‑list.  
+   - Everything *from* `mid` onward is the **right** sub‑list.
+
+2. **Recurse** on the left first, then on the right.  
+   (That’s why you always see the left‑side merges happen before the right‑side merges.)
+
+3. **Merge**: `_merge(left_sorted, right_sorted)` combines the two already‑sorted halves.
+
+If you ever get lost, draw the binary‑tree diagram above: each node is a call, its two children are the left/right recursive calls, and the leaves are the base‑case lists of length 0 or 1.
+
+---
+
+### TL;DR
+
+- `[5, 3, 8, 1]` → left `[5, 3]`, right `[8, 1]`  
+- `[5, 3]` → left `[5]`, right `[3]` → merge → `[3, 5]`  
+- `[8, 1]` → left `[8]`, right `[1]` → merge → `[1, 8]`  
+- Final merge `[3, 5]` (left) with `[1, 8]` (right) → `[1, 3, 5, 8]`
+
+Now you can trace any deeper recursion by repeatedly applying the same “split‑left‑right‑then‑merge” rule. Happy debugging!","**Recursion tree**
+
+| Level | Call | Left sub‑list | Right sub‑list |
+|-------|------|---------------|----------------|
+| 0 | `merge_sort([5, 3, 8, 1])` | `[5, 3]` | `[8, 1]` |
+| 1 (left) | `merge_sort([5, 3])` | `[5]` | `[3]` |
+| 1 (right) | `merge_sort([8, 1])` | `[8]` | `[1]` |
+
+**Merges**
+
+1. `_merge([5], [3])` → `[3, 5]`
+2. `_merge([8], [1])` → `[1, 8]`
+3. `_merge([3, 5], [1, 8])` → `[1, 3, 5, 8]`
+
+**Final merged list**
+
+```
+[1, 3, 5, 8]
+```
+","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 197353, Requested 3016. Please try again in 2m39.408s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+225,2026-11-24T22:00:28.238670+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,zero_shot,cerebras,gpt-oss-120b,2,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,422,1648,57,2070,1.0517,0,OK,0,1,1,0,OK,API_ERROR,1,1,,0.0,1.0,,,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"Below is a **step‑by‑step walk‑through** of the `merge_sort` function as it runs on the list  
+
+```python
+arr = [5, 3, 8, 1]
+```
+
+I’ll keep the **call‑stack** visible at every level, label each recursive call as **L** (the “left” half) or **R** (the “right” half), and show exactly what the `_merge` routine does when the recursion starts to unwind.
+
+---
+
+## 1️⃣  The top‑level call  
+
+```
+merge_sort([5, 3, 8, 1])
+```
+
+* `mid = len(arr)//2 = 4//2 = 2`
+* **left**  = `merge_sort([5, 3])`   ← **L1**
+* **right** = `merge_sort([8, 1])`   ← **R1**
+
+The function does **not** sort anything yet – it just splits and recurses.
+
+---
+
+## 2️⃣  First level of recursion  
+
+### L1 – `merge_sort([5, 3])`
+
+* `mid = 2//2 = 1`
+* **left**  = `merge_sort([5])`   ← **L2**
+* **right** = `merge_sort([3])`   ← **R2**
+
+Both `[5]` and `[3]` have length 1, so each call returns immediately (base case).
+
+```
+L2 returns [5]
+R2 returns [3]
+```
+
+Now `_merge([5], [3])` is executed (still inside **L1**).
+
+### R1 – `merge_sort([8, 1])`
+
+* `mid = 2//2 = 1`
+* **left**  = `merge_sort([8])`   ← **L3**
+* **right** = `merge_sort([1])`   ← **R3**
+
+Again, each sub‑list is length 1, so they return immediately.
+
+```
+L3 returns [8]
+R3 returns [1]
+```
+
+Now `_merge([8], [1])` is executed (still inside **R1**).
+
+---
+
+## 3️⃣  The `_merge` calls (the “unwinding” phase)
+
+### 3a️⃣  Merging inside **L1** – `_merge([5], [3])`
+
+```
+left = [5]   right = [3]
+i = j = 0
+```
+
+| step | comparison                | result list | i | j |
+|------|---------------------------|-------------|---|---|
+| 1    | 5 ≤ 3 ?  (False)          | [3]         | 0 | 1 |
+| 2    | right exhausted → extend left | [3, 5] | 1 | 1 |
+
+`_merge` returns **[3, 5]**.  
+So **L1** (the whole left half of the original array) is now **sorted** as `[3, 5]`.
+
+### 3b️⃣  Merging inside **R1** – `_merge([8], [1])`
+
+```
+left = [8]   right = [1]
+i = j = 0
+```
+
+| step | comparison                | result list | i | j |
+|------|---------------------------|-------------|---|---|
+| 1    | 8 ≤ 1 ?  (False)          | [1]         | 0 | 1 |
+| 2    | right exhausted → extend left | [1, 8] | 1 | 1 |
+
+`_merge` returns **[1, 8]**.  
+So **R1** (the whole right half of the original array) is now **sorted** as `[1, 8]`.
+
+---
+
+## 4️⃣  Final merge – back to the top level  
+
+We now have the two sorted halves:
+
+* **left**  = result of **L1** = `[3, 5]`
+* **right** = result of **R1** = `[1, 8]`
+
+We call `_merge([3, 5], [1, 8])`.
+
+```
+left = [3, 5]   right = [1, 8]
+i = j = 0
+```
+
+| step | comparison                     | result list | i | j |
+|------|--------------------------------|-------------|---|---|
+| 1    | 3 ≤ 1 ? (False)                | [1]         | 0 | 1 |
+| 2    | 3 ≤ 8 ? (True)                 | [1, 3]      | 1 | 1 |
+| 3    | 5 ≤ 8 ? (True)                 | [1, 3, 5]   | 2 | 1 |
+| 4    | left exhausted → extend right  | [1, 3, 5, 8] | 2 | 2 |
+
+`_merge` returns **[1, 3, 5, 8]** – the fully sorted list.
+
+---
+
+## 5️⃣  Recap of the call‑stack (with results)
+
+```
+merge_sort([5, 3, 8, 1])          →  [1, 3, 5, 8]
+│
+├─ L1: merge_sort([5, 3])        →  [3, 5]
+│   ├─ L2: merge_sort([5])       →  [5]
+│   └─ R2: merge_sort([3])       →  [3]
+│   └─ _merge([5], [3])          →  [3, 5]
+│
+└─ R1: merge_sort([8, 1])        →  [1, 8]
+    ├─ L3: merge_sort([8])       →  [8]
+    └─ R3: merge_sort([1])       →  [1]
+    └─ _merge([8], [1])          →  [1, 8]
+    
+└─ _merge([3, 5], [1, 8])        →  [1, 3, 5, 8]
+```
+
+---
+
+### Quick mental tip for deeper recursions
+
+1. **Always write the sub‑list you are calling on** next to the function name.  
+   Example: `merge_sort([5, 3])` → “I’m sorting the left half of the original list.”
+2. **Label the two recursive calls** as **L** (first half) and **R** (second half).  
+   The *order* never changes: first you compute `left = merge_sort(arr[:mid])`, then `right = merge_sort(arr[mid:])`.
+3. **When a call returns**, immediately note the returned list; that’s the *sorted* version of that sub‑list.  
+   Then you can move on to the next sibling call or to the merge step.
+4. **Draw a tiny tree** (as above) – each node is a call, each leaf is a base‑case list of length 0 or 1.  
+   The merge steps happen **bottom‑up**, exactly in the order you see the arrows pointing upward.
+
+With this systematic approach you can trace `merge_sort` on any size list, no matter how many recursion levels are involved. Happy debugging!","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199665, Requested 2542. Please try again in 15m53.424s. Need more tokens? U","{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor's step-by-step trace of merge_sort([5, 3, 8, 1]) is factually correct, matching the code's logic and the teacher notes' ground truth (splits into [5,3]/[8,1], merges to [3,5]/[1,8], final [1,3,5,8]), and provides the complete final result.""}"
+227,2026-11-24T22:03:52.955250+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,socratic,cerebras,gpt-oss-120b,2,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,484,310,115,794,0.7309,0,OK,0,1,0,0,API_ERROR,OK,,,1,1.0,,1.0,,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"You’re on the right track—let’s break it down step by step:
+
+1. When you call `merge_sort([5, 3, 8, 1])`, what are the exact slices passed to the first two recursive calls (`arr[:mid]` and `arr[mid:]`)? Write down those sub‑lists.
+
+2. For each of those sub‑lists, repeat the same question: what slices do they produce on their next recursive call? (Hint: keep an eye on the `mid` calculation.)
+
+3. At what point does the condition `len(arr) <= 1` become true, and what does the function return at that moment? How does that return value become the `left` or `right` argument for the next level up? 
+
+Take a moment to jot these values down; you’ll see the call/return order clearly. Keep going—you’ve got this!","**Recursion tree (showing the left/right slices at each level)**  
+
+| Call | `arr` | `mid` | **left slice** | **right slice** |
+|------|-------|-------|----------------|-----------------|
+| 0 | `[5, 3, 8, 1]` | 2 | `[5, 3]` | `[8, 1]` |
+| 1‑L | `[5, 3]` | 1 | `[5]` | `[3]` |
+| 1‑R | `[8, 1]` | 1 | `[8]` | `[1]` |
+| 2‑L‑L | `[5]` | – | – | – |
+| 2‑L‑R | `[3]` | – | – | – |
+| 2‑R‑L | `[8]` | – | – | – |
+| 2‑R‑R | `[1]` | – | – | – |
+
+**Base‑case returns**
+
+- `merge_sort([5])` → `[5]`
+- `merge_sort([3])` → `[3]`
+- `merge_sort([8])` → `[8]`
+- `merge_sort([1])` → `[1]`
+
+**Merging steps**
+
+1. `merge([5], [3])` → `[3, 5]`
+2. `merge([8], [1])` → `[1, 8]`
+3. `merge([3, 5], [1, 8])` → `[1, 3, 5, 8]`
+
+**Final merged list**
+
+```
+[1, 3, 5, 8]
+```
+","RateLimitError: Error code: 429 - {'error': {'message': ""Request too large for model `qwen/qwen3.8-27b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on output tokens per minute (OTPM): Limit 1000, Requested 1446. The request's expected output tokens exceed the enforced limit; reduce max_tokens (or the request's expected output) and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"", 'type': 'tokens', 'code': 'rate_lim"
+228,2026-11-24T22:08:43.141710+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,,,none,no_tutor_control,control,openai/gpt-oss-20b,2,,,,,,,,,,,,API_ERROR,0,,,,,API_ERROR,,,,,,,,,openai/gpt-oss-20b,,,,
+229,2026-11-24T22:10:53.901314+00:00,Q1_callstack_factorial,call_stack_tracing,,,none,no_tutor_control,control,openai/gpt-oss-20b,1,,,,,,,,,,,,API_ERROR,0,,,,,API_ERROR,,,,,,,,,openai/gpt-oss-20b,,,,
+231,2026-11-24T22:10:54.412154+00:00,Q6_concept_stack_lifo,curriculum_alignment,,,none,no_tutor_control,control,openai/gpt-oss-20b,0,,,,,,,,,,,,OK,0,,,,,OK,,,1,,,1.0,,,openai/gpt-oss-20b,,,"After `push(1)`, `push(2)`, and `push(3)` the internal list is `[1, 2, 3]`.  
+Calling `pop()` removes and returns the last element of that list, which is `3`.  
+So `pop()` returns `3` because a stack is **Last‑In, First‑Out (LIFO)**: the most recently pushed item is the first one to be removed.",
+233,2026-11-24T22:10:56.461438+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,2,bm25+dense+crossencoder,"[""FunctionDef:linear_search_buggy:L55-60"", ""FunctionDef:binary_search:L41-52""]",605,1.0,1,289,723,73,1012,2.0308,0,OK,0,1,1,1,API_ERROR,API_ERROR,,,,0.0,,,,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"**What’s happening?**  
+
+```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr) - 1):      # <-- problem
+        if arr[i] == target:
+            return i
+    return -1
+```
+
+`range(len(arr) - 1)` creates an iterator that stops **one element short** of the full list:
+
+| `len(arr)` | `range(len(arr) - 1)` produces |
+|------------|--------------------------------|
+| 5          | 0, 1, 2, 3                     |
+| 1          | (empty)                        |
+
+So the loop never examines the element at index `len(arr) - 1`, which is the **last element** of the list. If the target happens to be stored there, the condition `arr[i] == target` is never reached, and the function falls through to `return -1`.
+
+That’s why the function “never finds the target when it’s the very last element”.
+
+---
+
+### Fixing the off‑by‑one error
+
+You have a few simple options:
+
+#### 1. Iterate over the full range
+
+```python
+def linear_search(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):          # <-- include the last index
+        if arr[i] == target:
+            return i
+    return -1
+```
+
+#### 2. Use `enumerate` (more Pythonic)
+
+```python
+def linear_search(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i, value in enumerate(arr):
+        if value == target:
+            return i
+    return -1
+```
+
+#### 3. Use the `in` operator with `list.index` (if you want a one‑liner)
+
+```python
+def linear_search(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    try:
+        return arr.index(target)
+    except ValueError:
+        return -1
+```
+
+All three versions will correctly locate the target even when it is the last element.
+
+---
+
+### Quick sanity check
+
+```python
+>>> arr = [10, 20, 30, 40, 50]
+>>> linear_search(arr, 50)   # last element
+0  # with the buggy version
+-1 # after fixing it returns 4
+>>> linear_search(arr, 30)
+2
+>>> linear_search(arr, 99)
+-1
+```
+
+Now the function behaves as expected.
+
+---
+
+### Take‑away
+
+The bug is an **off‑by‑one error** caused by using `range(len(arr) - 1)`. In Python (and most languages), loops that need to visit every element should iterate up to `len(arr)`, not `len(arr) - 1`. Using `enumerate` or built‑in list methods can help avoid this class of mistake.","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199493, Requested 1168. Please try again in 4m45.552s. Need more tokens? Up","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198475, Requested 1769. Please try again in 1m45.408s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+234,2026-11-24T22:15:23.092837+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,cot_tracing,groq,openai/gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,629,1148,575,1777,2.8965,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen/qwen3.8-27b,"<reasoning>
+**Initial call**  
+- `merge_sort([5, 3, 8, 1])`  
+  - `len = 4 > 1` → `mid = 2`  
+  - **Left recursive call** with `arr[:mid] = [5, 3]`  
+  - **Right recursive call** with `arr[mid:] = [8, 1]`
+
+**First left branch** (`merge_sort([5, 3])`)  
+- `len = 2 > 1` → `mid = 1`  
+- **Left call** with `[5]` → base case (`len ≤ 1`), returns `[5]`  
+- **Right call** with `[3]` → base case, returns `[3]`  
+- `_merge([5], [3])` produces `[3, 5]` (store as **left result** for the top level)
+
+**First right branch** (`merge_sort([8, 1])`)  
+- `len = 2 > 1` → `mid = 1`  
+- **Left call** with `[8]` → base case, returns `[8]`  
+- **Right call** with `[1]` → base case, returns `[1]`  
+- `_merge([8], [1])` produces `[1, 8]` (store as **right result** for the top level)
+
+**Top‑level merge**  
+- `_merge(left_result = [3, 5], right_result = [1, 8])`  
+- Compare elements: 1 < 3 → append 1, then 3 < 8 → append 3, then 5 < 8 → append 5, finally append remaining 8.  
+- Final returned list: `[1, 3, 5, 8]`.
+
+Throughout the recursion, each call creates its own `left` and `right` variables that are local to that call frame, so the names do not clash across levels. The call stack unwinds in the order: deepest base cases → their merges → up to the original call.
+</reasoning>
+<hint>
+Look at the first split of the original list `[5, 3, 8, 1]`. What sub‑list does the **left** recursive call receive, and what sub‑list does the **right** recursive call receive? Once you have those two, trace one level deeper for each: what are the arguments of the next left and right calls inside the left branch? Write them down before moving to the merge step. What will be the result of merging the two base‑case lists you just identified?
+</hint>","**Recursion tree**
+
+| Level | Call | Left sub‑list | Right sub‑list |
+|-------|------|---------------|----------------|
+| 0 | `merge_sort([5,3,8,1])` | `[5,3]` | `[8,1]` |
+| 1 (left) | `merge_sort([5,3])` | `[5]` | `[3]` |
+| 1 (right) | `merge_sort([8,1])` | `[8]` | `[1]` |
+
+**Merging**
+
+1. `merge([5],[3])` → `[3,5]`
+2. `merge([8],[1])` → `[1,8]`
+3. `merge([3,5],[1,8])` → `[1,3,5,8]`
+
+**Final merged list:** `[1, 3, 5, 8]`","{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The hidden reasoning correctly traces the merge sort steps and matches the teacher notes, while the student-visible text only asks guiding questions without providing the final answer.""}"

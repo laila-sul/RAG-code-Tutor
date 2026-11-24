@@ -1,50 +1,5 @@
 run_id,query_id,prompt_strategy,tutor_output,student_output,human_scaffolding_0_1,human_accurate_0_1,annotator
-100,Q3_debug_offbyone_linearsearch,cot_tracing,"<reasoning>
-**Function under inspection**
-
-```python
-def linear_search_buggy(arr, target):
-    for i in range(len(arr) - 1):
-        if arr[i] == target:
-            return i
-    return -1
-```
-
-**Goal:** Find the index of `target` in `arr`.  
-
-**Test case that fails:**  
-
-```python
-arr = [4, 7, 2, 9, 5]   # length = 5
-target = 5               # target is at index 4 (the last position)
-```
-
-**Step‑by‑step execution**
-
-| Step | `i` (loop variable) | `arr[i]` | Comparison `arr[i] == target` | Action |
-|------|---------------------|----------|-------------------------------|--------|
-| 1    | `range(len(arr) - 1)` → `range(4)` → first value `0` | `arr[0] = 4` | `4 == 5` → **False** | Continue loop |
-| 2    | `i = 1` | `arr[1] = 7` | `7 == 5` → **False** | Continue loop |
-| 3    | `i = 2` | `arr[2] = 2` | `2 == 5` → **False** | Continue loop |
-| 4    | `i = 3` | `arr[3] = 9` | `9 == 5` → **False** | Continue loop |
-| 5    | Loop ends because `range(4)` produces only `0,1,2,3`. | — | — | Exit loop, reach `return -1` |
-
-**Observation:**  
-- The loop iterates over `range(len(arr) - 1)`.  
-- For an array of length `5`, `range(4)` yields indices `0` through `3`.  
-- Index `4` (the last element) is never examined, so the function cannot ever return `4`.  
-
-**Result:** The function returns `-1` even though the target exists at the last index.
-
-**Root cause:** An off‑by‑one error in the loop’s range expression, which excludes the final index of the list.  
-</reasoning>
-
-<hint>
-Look at the `for` loop header: `for i in range(len(arr) - 1):`.  
-What value does `range(len(arr) - 1)` produce when `len(arr) = 5`?  
-How could you adjust the range so that the loop also checks the element at index 4?  
-What should the upper bound be to include the last index of any list?  
-</hint>","```python
+196,Q3_debug_offbyone_linearsearch,no_tutor_control,,"```python
 def linear_search_buggy(arr, target):
     """"""Linear search over a list. Returns the index of target or -1.""""""
     for i in range(len(arr)):
@@ -52,997 +7,196 @@ def linear_search_buggy(arr, target):
             return i
     return -1
 ```
+I changed the loop to iterate over the full length of the list instead of stopping one element early.",,,
+107,Q1_callstack_factorial,cot_tracing,"<reasoning>
+**Initial call:** `factorial(5)`  
+- `n = 5` (greater than 1) → needs result of `factorial(4)`.
 
-I changed the loop to `range(len(arr))` so it checks the last element as well.",,,
-151,Q2_callstack_mergesort,cot_tracing,"<reasoning>
-**Initial call**: `merge_sort([5, 3, 8, 1])`  
-- `len = 4 > 1`, compute `mid = 2`.  
-- Split into `left_part = [5, 3]`, `right_part = [8, 1]`.  
+**Call 2:** `factorial(4)`  
+- `n = 4` → needs result of `factorial(3)`.
 
-**First level recursion**  
-1. Call `merge_sort([5, 3])` → **Level 1‑Left**  
-   - `len = 2 > 1`, `mid = 1`.  
-   - Split: `left = [5]`, `right = [3]`.  
+**Call 3:** `factorial(3)`  
+- `n = 3` → needs result of `factorial(2)`.
 
-   a. Call `merge_sort([5])` → **Level 2‑Left‑Left**  
-      - `len = 1` → base case, returns `[5]`.  
+**Call 4:** `factorial(2)`  
+- `n = 2` → needs result of `factorial(1)`.
 
-   b. Call `merge_sort([3])` → **Level 2‑Left‑Right**  
-      - `len = 1` → base case, returns `[3]`.  
+**Call 5 (base case):** `factorial(1)`  
+- `n = 1` satisfies `n <= 1`, returns `1`.
 
-   c. After both returns, call `_merge([5], [3])` → **Level 2‑Left‑Merge**  
-      - Compare 5 vs 3 → result `[3]`, `j` increments.  
-      - Right list exhausted, extend remaining left → result `[3, 5]`.  
-      - Returns `[3, 5]` to **Level 1‑Left**.
+**Unwinding phase:**  
 
-2. Call `merge_sort([8, 1])` → **Level 1‑Right**  
-   - `len = 2 > 1`, `mid = 1`.  
-   - Split: `left = [8]`, `right = [1]`.  
+- Return to **Call 4** (`factorial(2)`):  
+  - Received `sub_result = 1` from `factorial(1)`.  
+  - Computes `2 * sub_result = 2 * 1 = 2`.  
+  - Returns `2`.
 
-   a. Call `merge_sort([8])` → **Level 2‑Right‑Left**  
-      - `len = 1` → base case, returns `[8]`.  
+- Return to **Call 3** (`factorial(3)`):  
+  - Received `sub_result = 2` from `factorial(2)`.  
+  - Computes `3 * sub_result = 3 * 2 = 6`.  
+  - Returns `6`.
 
-   b. Call `merge_sort([1])` → **Level 2‑Right‑Right**  
-      - `len = 1` → base case, returns `[1]`.  
+- Return to **Call 2** (`factorial(4)`):  
+  - Received `sub_result = 6` from `factorial(3)`.  
+  - Computes `4 * sub_result = 4 * 6 = 24`.  
+  - Returns `24`.
 
-   c. Call `_merge([8], [1])` → **Level 2‑Right‑Merge**  
-      - Compare 8 vs 1 → result `[1]`, `j` increments.  
-      - Right list exhausted, extend remaining left → result `[1, 8]`.  
-      - Returns `[1, 8]` to **Level 1‑Right**.
+- Return to **Call 1** (`factorial(5)`):  
+  - Received `sub_result = 24` from `factorial(4)`.  
+  - Computes `5 * sub_result = 5 * 24 = 120`.  
+  - Returns `120`.
 
-**Back to initial call**  
-- Now we have `left = [3, 5]` (result from **Level 1‑Left**) and `right = [1, 8]` (result from **Level 1‑Right**).  
-- Call `_merge([3, 5], [1, 8])` → **Level 1‑Merge**  
-   - Compare 3 vs 1 → result `[1]`, `j`++.  
-   - Compare 3 vs 8 → result `[1, 3]`, `i`++.  
-   - Compare 5 vs 8 → result `[1, 3, 5]`, `i`++.  
-   - Left list exhausted, extend remaining right → result `[1, 3, 5, 8]`.  
-   - Returns final sorted list `[1, 3, 5, 8]`.
-
-Throughout the recursion, each call’s “left” and “right” refer to the two halves created **at that call’s level**, not to any global notion. By labeling the level (e.g., Level 1‑Left, Level 2‑Right‑Merge) you can keep track of which sub‑list is being merged at each step.
+**Final result:** `factorial(5)` evaluates to `120`.
 </reasoning>
 <hint>
-Try labeling each recursive call with its depth and whether it’s the left or right half (e.g., “Depth 2 ‑ right”). At depth 2, what sub‑list does the left recursive call receive when the original list is `[5, 3, 8, 1]`? 
-</hint>","**Answer to the tutor’s question**
-
-At depth 2, the left recursive call receives the sub‑list **`[5]`** (the left half of the left half).
-
----
-
-### Sub‑lists at each recursion level
-
-| Depth | Call | Sub‑list |
-|-------|------|----------|
-| 0 | `merge_sort([5,3,8,1])` | `[5, 3, 8, 1]` |
-| 1 | left half | `[5, 3]` |
-| 1 | right half | `[8, 1]` |
-| 2 | left‑left | `[5]` |
-| 2 | left‑right | `[3]` |
-| 2 | right‑left | `[8]` |
-| 2 | right‑right | `[1]` |
-
----
-
-### Merging steps
-
-1. Merge `[5]` and `[3]` → `[3, 5]`
-2. Merge `[8]` and `[1]` → `[1, 8]`
-3. Merge `[3, 5]` and `[1, 8]` → `[1, 3, 5, 8]`
-
-**Final merged list:** `[1, 3, 5, 8]`",,,
-181,Q5_concept_search_complexity,zero_shot,"### Time‑complexity at a glance  
-
-| Algorithm | Input requirement | Worst‑case complexity | Average‑case complexity | Best‑case |
-|-----------|-------------------|----------------------|--------------------------|-----------|
-| **Linear search** (e.g. `linear_search_buggy`) | **No ordering needed** – works on any list | **O(n)** – you may have to look at every element | **O(n)** – on random data you still scan a constant fraction of the list | **O(1)** – the target happens to be the first element |
-| **Binary search** (`binary_search`) | **Sorted list** (strictly increasing or non‑decreasing) | **O(log n)** – each iteration halves the remaining range | **O(log n)** – same as worst case because the algorithm always halves the interval | **O(1)** – the middle element is the target on the first check |
-
-*The “n” above is the number of elements in the list.*
-
----
-
-## Why the difference matters
-
-### 1. **Growth rate**
-* **Linear** grows proportionally to the size of the data.  
-  If you double the list length, the number of comparisons roughly doubles.
-* **Binary** grows logarithmically.  
-  Doubling the list length adds only **one** extra comparison (because `log₂(2n) = log₂ n + 1`).
-
-| n | Linear comparisons (≈n) | Binary comparisons (≈log₂ n) |
-|---|------------------------|------------------------------|
-| 10 | 10 | 4 |
-| 1 000 | 1 000 | 10 |
-| 1 000 000 | 1 000 000 | 20 |
-| 1 000 000 000 | 1 000 000 000 | 30 |
-
-For large collections, the difference is dramatic.
-
-### 2. **Pre‑condition (sortedness)**
-Binary search **only works** if the data is already sorted (or you can guarantee that the part you are searching is sorted).  
-If you have an unsorted list, you must sort it first, which costs **O(n log n)** (or better with specialized algorithms). The total cost becomes:
-
-```
-sort (O(n log n)) + binary search (O(log n))  ≈ O(n log n)
-```
-
-If you only need a single lookup and the list is not sorted, a linear scan (`O(n)`) is cheaper overall.
-
-### 3. **Constant factors & cache behavior**
-* Linear search is extremely simple: a single loop, sequential memory access, excellent cache locality. The hidden constant factor is tiny.
-* Binary search jumps around the array (midpoint → left half → right half …). This can cause more cache misses, especially for very large arrays that don’t fit in L1/L2 cache. In practice, for **small to medium** arrays (a few hundred elements) the constant‑factor overhead of binary search can make it *slightly slower* than a linear scan, even though its asymptotic complexity is better.
-
-### 4. **Dynamic data**
-If the collection changes frequently (insertions/deletions) and you need to keep it sorted, maintaining the sorted order can be expensive (e.g., `O(n)` per insertion for a plain Python list). In such cases you might prefer a data structure that gives you fast look‑ups without full sorting (e.g., a hash table/dictionary → average‑case **O(1)**) or a balanced binary search tree (**O(log n)** for insert/search/delete).
-
----
-
-## When to choose which algorithm
-
-| Situation | Recommended approach |
-|-----------|----------------------|
-| **Unsorted data, one‑off lookup** | **Linear search** – no sorting cost, simple, fast for small‑to‑moderate sizes. |
-| **Unsorted data, many lookups** | **Sort once** (`O(n log n)`) then use **binary search** for each subsequent lookup, or better yet use a **hash table** (`dict`/`set`) for O(1) average lookups. |
-| **Already sorted data** | **Binary search** – you get O(log n) per lookup with no extra work. |
-| **Very small arrays (≤ ~30 elements)** | Linear search is often faster in practice because of lower overhead and better cache locality. |
-| **Memory‑constrained environment** | Linear search uses no extra memory; binary search works in‑place but still needs the sorted array. |
-| **Need to preserve original order** | Linear search (doesn’t require reordering). |
-| **Frequent inserts/deletes & need fast lookups** | Use a **hash table** (`dict`/`set`) or a balanced tree (`bisect` on a list + `insort` if you can tolerate O(n) insert cost). |
-| **Real‑time or embedded systems where predictability matters** | Binary search gives a guaranteed upper bound of `log₂ n` steps, which can be easier to reason about than a linear scan that could take up to `n` steps. |
-
----
-
-### Quick “rule of thumb”
-
-1. **If the list is already sorted** → go with binary search.
-2. **If the list is unsorted and you only need a few searches** → linear search is fine.
-3. **If you need many searches on an unsorted list** → either sort once + binary search *or* build a hash‑based structure (`dict`/`set`) for O(1) average lookups.
-4. **If the list is tiny** → the simplicity of linear search usually wins.
-
----
-
-### Example in Python
-
-```python
-def linear_search(arr, target):
-    """"""Simple O(n) scan.""""""
-    for i, val in enumerate(arr):
-        if val == target:
-            return i
-    return -1
-
-def binary_search(arr, target):
-    """"""Iterative O(log n) search; assumes arr is sorted.""""""
-    lo, hi = 0, len(arr) - 1
-    while lo <= hi:
-        mid = (lo + hi) // 2
-        if arr[mid] == target:
-            return mid
-        elif arr[mid] < target:
-            lo = mid + 1
-        else:
-            hi = mid - 1
-    return -1
-
-# Usage
-data = [5, 2, 9, 1, 7]               # unsorted
-print(linear_search(data, 9))        # works immediately
-
-data_sorted = sorted(data)           # O(n log n) once
-print(binary_search(data_sorted, 9)) # fast O(log n) lookups thereafter
-```
-
-Remember: **Complexity tells you how the algorithm scales**, but the *actual* choice also depends on data size, ordering, mutability, and hardware characteristics. Use the guidelines above to pick the right tool for the job.","Linear search runs in O(n) time and is simplest to use when the list is unsorted, small, or you only need a few look‑ups. Binary search runs in O(log n) time but requires a sorted list, making it the better choice for large, sorted collections or when performing many repeated searches.",,,
-113,Q6_concept_stack_lifo,socratic,"1. When you call `push`, what happens to the internal `_items` list—where is the new element placed relative to the elements already stored?  
-
-2. After several `push` calls, if you invoke `pop`, which index of `_items` does the method retrieve and remove, and why does that correspond to the “last” element you added?  
-
-3. How would the behavior change if `pop` removed the element at the beginning of the list instead of the end—what ordering would that produce?  
-
-(Think about the order in which items are added versus the order in which they are taken out.)","After `push(1)`, `push(2)`, `push(3)` the internal list is `[1, 2, 3]`.  
-Calling `pop()` removes and returns the element at the end of that list, which is `3`.  
-Because `push` always appends to the end and `pop` always removes from the end, the most recently added item (`3`) is the first one taken out—this is the LIFO (last‑in, first‑out) behavior.",,,
-125,Q3_debug_offbyone_linearsearch,socratic,"1. If `arr` has `N` elements, what exact sequence of indices does `range(len(arr) - 1)` produce?  
-
-2. Which index corresponds to the very last element of the list, and is that index included in the sequence from the previous question?  
-
-3. When the target resides at that last index, what does the loop do after checking the earlier indices, and what value is ultimately returned?  ","```python
-def linear_search_buggy(arr, target):
-    """"""Linear search over a list. Returns the index of target or -1.""""""
-    for i in range(len(arr)):          # include every index
-        if arr[i] == target:
-            return i
-    return -1
-```
-I changed the loop to `range(len(arr))` so the last element’s index is checked.",,,
-173,Q4_debug_loopinvariant_bubblesort,zero_shot,"The problem is the **inner loop’s upper bound**.  
-
-In a classic bubble‑sort you need to compare every adjacent pair up to the element that is already in its final position.  
-For an array of length `n` the inner loop should run from `0` to `n‑i‑2` **inclusive**, i.e. `range(n‑i‑1)`.  
-
-Your code uses:
-
-```python
-for j in range(n - i - 2):
-```
-
-Because `range` stops **before** the stop value, this iterates only up to `n‑i‑3`.  
-Consequently the last adjacent pair (`arr[n‑i‑2]` and `arr[n‑i‑1]`) is never compared, so the two right‑most elements can remain unsorted.
-
-### Fixed version
-
-```python
-def bubble_sort(arr):
-    """"""Bubble sort. Sorts the list in place and returns it.""""""
-    n = len(arr)
-    for i in range(n - 1):                 # we need n‑1 passes
-        for j in range(n - i - 1):         # compare up to the last unsorted pair
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-    return arr
-```
-
-### Why this works
-
-* **Outer loop (`i`)** – after each pass the largest element among the unsorted part “bubbles” to the end, so the next pass can ignore one more element at the right side. Hence we need `n‑1` passes (or `range(n)` – the last pass does nothing but is harmless).
-
-* **Inner loop (`j`)** – on the `i`‑th pass the rightmost `i` elements are already sorted, so we only need to compare indices `0 … n‑i‑2`. `range(n‑i‑1)` gives exactly those indices.
-
-### Optional optimisation
-
-If you want to stop early when the list is already sorted, you can add a `swapped` flag:
-
-```python
-def bubble_sort(arr):
-    n = len(arr)
-    for i in range(n - 1):
-        swapped = False
-        for j in range(n - i - 1):
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-                swapped = True
-        if not swapped:          # no swaps → array is sorted
-            break
-    return arr
-```
-
-Now the algorithm will finish in O(n) time for an already‑sorted list, while still being O(n²) in the worst case.","```python
-def bubble_sort_buggy(arr):
-    """"""Bubble sort. Sorts the list in place and returns it.""""""
-    n = len(arr)
-    for i in range(n - 1):                 # n-1 passes
-        for j in range(n - i - 1):         # compare up to the last unsorted pair
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-    return arr
-```
-I changed the inner loop to `range(n - i - 1)` so the last adjacent pair is compared.",,,
-183,Q3_debug_offbyone_linearsearch,cot_tracing,"<reasoning>
-**Scenario:** `arr = [2, 4, 6, 8]`, `target = 8`
-
-1. **Function entry**
-   - `arr` length = `len(arr) = 4`
-   - Loop header: `for i in range(len(arr) - 1)`
-
-2. **Compute loop range**
-   - `len(arr) - 1 = 4 - 1 = 3`
-   - `range(3)` produces the sequence of indices: `0, 1, 2`
-
-3. **Iteration steps**
-   - **i = 0**
-     - `arr[0] = 2`
-     - `2 == 8` → `False`
-   - **i = 1**
-     - `arr[1] = 4`
-     - `4 == 8` → `False`
-   - **i = 2**
-     - `arr[2] = 6`
-     - `6 == 8` → `False`
-
-4. **Loop termination**
-   - The loop stops after `i = 2` because the range does not include `i = 3`.
-   - The last element (`arr[3] = 8`) is never examined.
-
-5. **Return**
-   - After the loop, the function reaches `return -1`, indicating the target was not found.
-
-**Result:** The function never checks the element at index `len(arr) - 1`, so a target located at the very end of the list is missed.
-</reasoning>
-<hint>
-Examine the `for` loop’s range expression: `range(len(arr) - 1)`. For a list of length N, which indices does this range actually generate? Does it ever produce the index N‑1? What change to the range would allow the loop to inspect the final element? 
-</hint>","```python
-def linear_search_buggy(arr, target):
-    """"""Linear search over a list. Returns the index of target or -1.""""""
-    for i in range(len(arr)):
-        if arr[i] == target:
-            return i
-    return -1
-```
-I changed the loop to `range(len(arr))` so it checks the last element.",,,
-165,Q2_callstack_mergesort,socratic,"1. When you call `merge_sort([5, 3, 8, 1])`, what is the value of `mid` and which slices (`arr[:mid]` and `arr[mid:]`) become the first “left” and “right” sub‑lists?  
-
-2. After you’ve written down the sub‑lists for that first split, repeat the same question for each of those sub‑lists: what is the new `mid` and what are the resulting “left” and “right” pieces before the function returns?  
-
-You’re doing great—keeping a small table of each level’s slices will make the recursion much clearer!","**Recursion tree**
-
-| Level | Call | `mid` | `left` | `right` |
-|-------|------|-------|--------|---------|
-| 0 | `merge_sort([5,3,8,1])` | 2 | `[5,3]` | `[8,1]` |
-| 1a | `merge_sort([5,3])` | 1 | `[5]` | `[3]` |
-| 1b | `merge_sort([8,1])` | 1 | `[8]` | `[1]` |
-| 2a | `merge_sort([5])` | – | – | – (base case) |
-| 2b | `merge_sort([3])` | – | – | – (base case) |
-| 2c | `merge_sort([8])` | – | – | – (base case) |
-| 2d | `merge_sort([1])` | – | – | – (base case) |
-
-**Merging steps**
-
-1. Merge `[5]` and `[3]` → `[3,5]`
-2. Merge `[8]` and `[1]` → `[1,8]`
-3. Merge `[3,5]` and `[1,8]` → `[1,3,5,8]`
-
-**Final sorted list:** `[1, 3, 5, 8]`",,,
-78,Q3_debug_offbyone_linearsearch,socratic,"1. In the `for` loop of `linear_search_buggy`, what exact sequence of index values does `range(len(arr) - 1)` produce for a list of length 5?  
-
-2. Which index corresponds to the last element of the list, and does that index appear in the sequence you just identified?  
-
-3. If you wanted the loop to examine every element, how would the range’s start, stop, or step need to relate to `len(arr)`—does this remind you of any off‑by‑one patterns you’ve seen before?","```python
-def linear_search_buggy(arr, target):
-    """"""Linear search over a list. Returns the index of target or -1.""""""
-    for i in range(len(arr)):
-        if arr[i] == target:
-            return i
-    return -1
-```
-I changed the loop to `range(len(arr))` so it checks every index, including the last element.",,,
-103,Q6_concept_stack_lifo,cot_tracing,"<reasoning>
-**Internal trace of `Stack` operations**
-
-1. **Initialization**
-   - `self._items = []`  # empty list representing the stack.
-
-2. **push(1)**
-   - Call `self._items.append(1)`.
-   - State after operation: `self._items = [1]`.
-
-3. **push(2)**
-   - Call `self._items.append(2)`.
-   - State after operation: `self._items = [1, 2]`.
-
-4. **push(3)**
-   - Call `self._items.append(3)`.
-   - State after operation: `self._items = [1, 2, 3]`.
-
-5. **pop() – first call**
-   - Check `if not self._items:` → `False` (list is not empty).
-   - Execute `return self._items.pop()`.
-   - `list.pop()` removes and returns the **last** element (`3`).
-   - State after operation: `self._items = [1, 2]`.
-   - Returned value: `3`.
-
-6. **pop() – second call**
-   - Check `if not self._items:` → `False`.
-   - Execute `return self._items.pop()`.
-   - Removes and returns the new last element (`2`).
-   - State after operation: `self._items = [1]`.
-   - Returned value: `2`.
-
-7. **peek() (optional)**
-   - Returns `self._items[-1]` if list non‑empty.
-   - With current state `[1]`, `peek()` would give `1`.
-
-The key point: `push` always appends to the **right end** of the internal list, and `pop` always removes from that same right end. This “last‑in, first‑out” behavior is the definition of LIFO ordering.
-
-</reasoning>
-<hint>
-Look at the sequence of operations on an empty stack: push 1, push 2, push 3, then call pop once. Which element is removed first, and why does that illustrate LIFO behavior? What would be the next element returned if you called pop again? 
-</hint>","After `push(1)`, `push(2)`, `push(3)` the stack holds `[1, 2, 3]` (bottom to top).  
-Calling `pop()` removes the **top** element, so it returns `3`.  
-That shows LIFO because the most recently added item is the first one removed.  
-If you call `pop()` again, the next item returned would be `2`.",,,
-202,Q4_debug_loopinvariant_bubblesort,socratic,"1. When `i` is at its final value in the outer loop, what is the exact range produced by `range(n - i - 2)` for `j`?  
-
-2. For a list of length 5, can you list the pairs of indices `(j, j+1)` that the inner loop actually compares on each outer‑loop iteration?  
-
-3. If the last two elements remain unsorted, which specific comparison (i.e., which `j` value) is never being executed?","```python
-def bubble_sort_buggy(arr):
-    """"""Bubble sort. Sorts the list in place and returns it.""""""
-    n = len(arr)
-    for i in range(n - 1):
-        for j in range(n - i - 1):   # corrected upper bound
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-    return arr
-```
-I changed the inner loop to run up to `n - i - 1` instead of `n - i - 2` so the last pair is compared.",,,
-201,Q6_concept_stack_lifo,cot_tracing,"<reasoning>
-**Trace of internal state for a simple use‑case of the `Stack` class**
-
-1. **Create a new stack**
-   - `self._items` is initialized as an empty list: `[]`.
-
-2. **push('A')**
-   - Method call: `push(item='A')`.
-   - Operation: `self._items.append('A')`.
-   - New state of `self._items`: `['A']`.
-
-3. **push('B')**
-   - Method call: `push(item='B')`.
-   - Operation: `self._items.append('B')`.
-   - New state of `self._items`: `['A', 'B']`.
-
-4. **push('C')**
-   - Method call: `push(item='C')`.
-   - Operation: `self._items.append('C')`.
-   - New state of `self._items`: `['A', 'B', 'C']`.
-
-5. **peek()** (optional, just to view the top without removal)
-   - Method call: `peek()`.
-   - Returns the last element of the list: `self._items[-1]` → `'C'`.
-   - `self._items` remains `['A', 'B', 'C']`.
-
-6. **pop()**
-   - Method call: `pop()`.
-   - Check: `if not self._items:` → `False` (list is not empty).
-   - Operation: `self._items.pop()` removes and returns the last element.
-   - Returned value: `'C'`.
-   - New state of `self._items`: `['A', 'B']`.
-
-7. **pop()** again
-   - Method call: `pop()`.
-   - Check passes (list not empty).
-   - Operation: `self._items.pop()` removes `'B'`.
-   - Returned value: `'B'`.
-   - New state of `self._items`: `['A']`.
-
-8. **pop()** a third time
-   - Method call: `pop()`.
-   - Check passes.
-   - Operation: `self._items.pop()` removes `'A'`.
-   - Returned value: `'A'`.
-   - New state of `self._items`: `[]`.
-
-9. **pop()** on an empty stack
-   - Method call: `pop()`.
-   - Check: `if not self._items:` → `True`.
-   - Raises `IndexError(""pop from empty stack"")`.
-
-The sequence of returned items (`'C'`, `'B'`, `'A'`) demonstrates that the most recently *pushed* element is the first one *popped*—the essence of LIFO (Last‑In, First‑Out) ordering.
-
-</reasoning>
-<hint>
-Think about the order in which items are added with `push` and then removed with `pop`. If you push the values 1, 2, and 3 (in that order) onto an empty stack, what value will `peek()` show before any pop? After calling `pop()` once, which value is returned and what is now at the top of the stack? What would be the next value returned by a second `pop()`? 
-
-What value will be returned by the **first** `pop()` after pushing 1, 2, 3? 
-</hint>","After pushing 1, 2, and 3 onto the stack, the `pop()` method will return **3**.  
-This happens because each `push` adds the new item to the end of the internal list (`self._items`). The last item added (3) is at the end of the list, so when `pop()` removes and returns the last element, it removes that 3. This is the “last‑in, first‑out” behavior of a stack.",,,
-176,Q5_concept_search_complexity,cot_tracing,"<reasoning>
-**Binary Search Trace (example)**  
-- Input: `arr = [2, 5, 8, 12, 16, 23, 38]`, `target = 16`  
-- Initial state: `low = 0`, `high = 6` (len(arr)-1)  
-
-1. **Iteration 1**  
-   - Compute `mid = (0 + 6) // 2 = 3`  
-   - `arr[mid] = arr[3] = 12`  
-   - Since `12 < 16`, set `low = mid + 1 = 4` (high remains 6)  
-
-2. **Iteration 2**  
-   - Compute `mid = (4 + 6) // 2 = 5`  
-   - `arr[mid] = arr[5] = 23`  
-   - Since `23 > 16`, set `high = mid - 1 = 4` (low remains 4)  
-
-3. **Iteration 3**  
-   - Compute `mid = (4 + 4) // 2 = 4`  
-   - `arr[mid] = arr[4] = 16` → match, return index `4`.  
-
-**Linear Search (buggy) Trace (same input)**  
-- Loop runs `for i in range(len(arr) - 1)`, i.e., `i = 0 … 5` (stops before last element).  
-- Checks each `arr[i]` against `target`.  
-- When `i = 4`, `arr[4] = 16` matches, returns `4`.  
-- Note: because the loop stops at `len(arr)-2`, the last element (`arr[6] = 38`) would never be examined, which is the bug.  
-
-**Complexity Overview**  
-- Binary search halves the search space each iteration → O(log n).  
-- Linear search examines elements sequentially → O(n).  
-- The buggy version still has O(n) but may miss the final element.  
-</reasoning>
-<hint>
-Think about how many times each algorithm looks at an element when the list gets larger. For a list of 1,024 items, binary search cuts the range in half each step, while linear search checks items one by one. How many comparisons does binary search need in the worst case for 1,024 elements, and how many does linear search need? What does that tell you about which algorithm to pick for a very large, sorted list? 
-</hint>","Binary search runs in O(log n) time, needing about log₂(1 024) ≈ 10 comparisons in the worst case, while linear search runs in O(n) time, needing up to 1 024 comparisons. Use binary search for large, sorted lists to save time, and linear search when the list is small, unsorted, or you need the first match without sorting.",,,
-160,Q2_callstack_mergesort,cot_tracing,"<reasoning>
-**Initial call**  
-- `merge_sort([5, 3, 8, 1])`  
-- `len(arr) = 4` → not base case.  
-- `mid = 4 // 2 = 2`  
-- `left = merge_sort(arr[:2]) = merge_sort([5, 3])`  
-- `right = merge_sort(arr[2:]) = merge_sort([8, 1])`
-
----
-
-**First left‑branch recursion** (`merge_sort([5, 3])`)  
-- `len(arr) = 2` → not base case.  
-- `mid = 2 // 2 = 1`  
-- `left = merge_sort([5])`  
-- `right = merge_sort([3])`
-
-*`merge_sort([5])`* → base case (`len=1`), returns `[5]`.  
-*`merge_sort([3])`* → base case, returns `[3]`.
-
-**_merge([5], [3])**  
-- `i=0, j=0, result=[]`  
-- Compare `5` vs `3` → `3` smaller → `result=[3]`, `j=1`  
-- `j` reached end → extend remaining `left[i:] = [5]` → `result=[3,5]`  
-- Returns `[3, 5]` → this becomes the **left** result for the top‑level call.
-
----
-
-**First right‑branch recursion** (`merge_sort([8, 1])`)  
-- `len(arr) = 2` → not base case.  
-- `mid = 1`  
-- `left = merge_sort([8])` → base case, returns `[8]`  
-- `right = merge_sort([1])` → base case, returns `[1]`
-
-**_merge([8], [1])**  
-- `i=0, j=0, result=[]`  
-- Compare `8` vs `1` → `1` smaller → `result=[1]`, `j=1`  
-- `j` reached end → extend remaining `left[i:] = [8]` → `result=[1,8]`  
-- Returns `[1, 8]` → this becomes the **right** result for the top‑level call.
-
----
-
-**Final merge at top level** (`_merge([3,5], [1,8])`)  
-- `i=0, j=0, result=[]`  
-- Compare `3` vs `1` → `1` smaller → `result=[1]`, `j=1`  
-- Compare `3` vs `8` → `3` smaller → `result=[1,3]`, `i=1`  
-- Compare `5` vs `8` → `5` smaller → `result=[1,3,5]`, `i=2`  
-- `i` reached end → extend remaining `right[j:] = [8]` → `result=[1,3,5,8]`  
-- Returns `[1, 3, 5, 8]` as the final sorted list.
-
-The call/return order is:
-
-1. `merge_sort([5,3,8,1])`  
-2. `merge_sort([5,3])` → `merge_sort([5])`, `merge_sort([3])` → `_merge([5],[3])` → returns `[3,5]`  
-3. `merge_sort([8,1])` → `merge_sort([8])`, `merge_sort([1])` → `_merge([8],[1])` → returns `[1,8]`  
-4. `_merge([3,5],[1,8])` → final result `[1,3,5,8]`.
-
-All intermediate variable values (arr, mid, left, right, i, j, result) are listed above.
-</reasoning>
-<hint>
-Start by writing down the first split: for `merge_sort([5, 3, 8, 1])` what are the values of `mid`, the left sub‑list, and the right sub‑list? Then move one level deeper: when you call `merge_sort` on the left sub‑list, what is its `mid` and what sub‑lists does it produce? 
-
-**Question:** After the first split, what are the exact contents of the left and right sub‑lists that you will pass to the next recursive calls?","**After the first split**
-
-- `mid = 2`  
-- **Left sub‑list** passed to the next call: `[5, 3]`  
-- **Right sub‑list** passed to the next call: `[8, 1]`
-
----
-
-### Recursion tree (left/right at each level)
-
-| Level | Current list | `mid` | Left sub‑list | Right sub‑list |
-|-------|--------------|-------|---------------|----------------|
-| 0 | `[5, 3, 8, 1]` | 2 | `[5, 3]` | `[8, 1]` |
-| 1‑L | `[5, 3]` | 1 | `[5]` | `[3]` |
-| 1‑R | `[8, 1]` | 1 | `[8]` | `[1]` |
-| 2‑L‑L | `[5]` | – | – | – |
-| 2‑L‑R | `[3]` | – | – | – |
-| 2‑R‑L | `[8]` | – | – | – |
-| 2‑R‑R | `[1]` | – | – | – |
-
----
-
-### Merging steps
-
-1. Merge `[5]` and `[3]` → `[3, 5]`  
-2. Merge `[8]` and `[1]` → `[1, 8]`  
-3. Merge `[3, 5]` and `[1, 8]` → **`[1, 3, 5, 8]`**
-
-So the final sorted list is `[1, 3, 5, 8]`.",,,
-163,Q4_debug_loopinvariant_bubblesort,socratic,"1. When `i` equals `n‑2` (the last outer iteration), what values does the inner `range` produce for `j`? Which pair of indices are compared on that pass?
-
-2. After the inner loop finishes for a given `i`, what can you say about the element at position `n‑i‑1`? Does the loop guarantee it is the largest remaining unsorted element?
-
-3. Try running the algorithm on a tiny list, e.g. `[3, 2, 1]`. Step through each iteration and note which adjacent pairs are never compared—does any pair involving the final two elements get missed?","```python
-def bubble_sort_buggy(arr):
-    """"""Bubble sort. Sorts the list in place and returns it.""""""
-    n = len(arr)
-    for i in range(n - 1):          # run n‑1 outer passes
-        for j in range(n - i - 1):  # compare up to the last unsorted pair
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-    return arr
-```
-I changed the inner loop to `range(n - i - 1)` so the last adjacent pair is always compared.",,,
-97,Q4_debug_loopinvariant_bubblesort,socratic,"1. When `i` equals `n‑2`, what exact values does the inner loop `for j in range(n - i - 2)` produce for `j`?  
-
-2. For the final pass of the outer loop (when `i = n‑1`), does the inner loop execute at all? If not, what comparison is missed for the last two elements?  
-
-3. Think back to the earlier loop‑invariant issue you encountered: what condition must hold true after each inner‑loop iteration to guarantee that the largest unsorted element has “bubbled” to its correct position? How does the current bound affect that condition?","```python
-def bubble_sort_buggy(arr):
-    """"""Bubble sort. Sorts the list in place and returns it.""""""
-    n = len(arr)
-    for i in range(n - 1):          # n-1 passes
-        for j in range(n - i - 1):  # compare up to the last unsorted element
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-    return arr
-```
-
-I changed the inner‑loop bound from `n - i - 2` to `n - i - 1` so the last two elements are compared on the final pass.",,,
-50,Q6_concept_stack_lifo,cot_tracing,"<reasoning>
-1. **Initial state** – When a `Stack` instance is created, `self._items` is an empty list `[]`.
-
-2. **First push** – Call `stack.push(1)`.  
-   - Inside `push`, `self._items.append(1)` is executed.  
-   - New state of `self._items`: `[1]`.
-
-3. **Second push** – Call `stack.push(2)`.  
-   - `self._items.append(2)` adds `2` to the end of the list.  
-   - New state of `self._items`: `[1, 2]`.
-
-4. **Third push** – Call `stack.push(3)`.  
-   - `self._items.append(3)` adds `3` to the end.  
-   - New state of `self._items`: `[1, 2, 3]`.
-
-5. **First pop** – Call `stack.pop()`.  
-   - `pop` first checks `if not self._items:` – the list is non‑empty, so no error.  
-   - It then executes `return self._items.pop()`.  
-   - Python’s list `pop()` without an index removes and returns the **last** element, which is `3`.  
-   - After removal, `self._items` becomes `[1, 2]`.  
-   - The method returns `3`.
-
-6. **Second pop** – Call `stack.pop()` again.  
-   - The list is `[1, 2]`; `self._items.pop()` removes and returns `2`.  
-   - New state: `[1]`.  
-   - Returns `2`.
-
-7. **Third pop** – Call `stack.pop()` a final time.  
-   - The list is `[1]`; `self._items.pop()` removes and returns `1`.  
-   - New state: `[]`.  
-   - Returns `1`.
-
-Throughout these operations, items are added to the *end* of the internal list and removed from the *end* as well, which is exactly the Last‑In‑First‑Out (LIFO) behavior expected of a stack.
-</reasoning>
-<hint>
-Look at the order in which items appear in `self._items` after each `push`. After pushing three values, what does the internal list contain? When you then call `pop`, which element (by position) is removed and returned? Based on that, what value would the first `pop` give you? 
-</hint>","After `push(1)`, `push(2)`, `push(3)` the internal list is `[1, 2, 3]`.  
-`pop()` removes the last element of that list (`self._items.pop()`), so it returns `3`.  
-Thus the first `pop()` gives you the most recently pushed item, following LIFO order.",,,
-114,Q1_callstack_factorial,zero_shot,"Sure! Let’s walk through exactly what happens when you call  
-
-```python
-factorial(5)
-```  
-
-with the implementation you have:
-
-```python
-def factorial(n):
-    """"""Recursive factorial. Base case n <= 1.""""""
-    if n <= 1:
-        return 1
-    return n * factorial(n - 1)
-```
-
-### 1. The “downward” phase – building the stack
-
-Each recursive call creates a **new stack frame** (a little “box” that stores the local variables for that call).  
-Think of the stack as a pile of plates: the most recent call is on the **top** of the pile.
-
-| Stack (top → bottom) | What the frame is waiting for |
-|----------------------|------------------------------|
-| `factorial(5)`       | result of `factorial(4)`     |
-| `factorial(4)`       | result of `factorial(3)`     |
-| `factorial(3)`       | result of `factorial(2)`     |
-| `factorial(2)`       | result of `factorial(1)`     |
-| `factorial(1)`       | **base case** – returns 1   |
-
-The calls happen in this order:
-
-1. `factorial(5)` sees `n > 1`, so it **calls** `factorial(4)`.
-2. `factorial(4)` calls `factorial(3)`.
-3. `factorial(3)` calls `factorial(2)`.
-4. `factorial(2)` calls `factorial(1)`.
-5. `factorial(1)` hits the base case (`n <= 1`) and **returns 1** immediately.
-
-At this point the “downward” phase stops – we have reached the base case and start **unwinding** the stack.
-
-### 2. The “upward” phase – multiplication as the calls return
-
-Now each pending call gets the value it was waiting for, performs the multiplication, and returns that result to the caller below it.
-
-| Step | Current frame (top) | Returned value from deeper call | What this frame returns |
-|------|---------------------|----------------------------------|--------------------------|
-| A    | `factorial(2)`      | got `1` from `factorial(1)`      | `2 * 1 = 2` → returns **2** |
-| B    | `factorial(3)`      | got `2` from `factorial(2)`      | `3 * 2 = 6` → returns **6** |
-| C    | `factorial(4)`      | got `6` from `factorial(3)`      | `4 * 6 = 24` → returns **24** |
-| D    | `factorial(5)`      | got `24` from `factorial(4)`     | `5 * 24 = 120` → returns **120** |
-
-Let’s see the actual code execution for each step:
-
-```python
-# A: inside factorial(2)
-return 2 * factorial(1)   # factorial(1) already gave 1
-# => returns 2
-
-# B: inside factorial(3)
-return 3 * factorial(2)   # factorial(2) just returned 2
-# => returns 6
-
-# C: inside factorial(4)
-return 4 * factorial(3)   # factorial(3) just returned 6
-# => returns 24
-
-# D: inside factorial(5)
-return 5 * factorial(4)   # factorial(4) just returned 24
-# => returns 120
-```
-
-### 3. Visual “stack diagram”
-
-```
-Call stack (top = most recent call)
-
-|-------------------|
-| factorial(5)      |  <-- waiting for factorial(4)
-|-------------------|
-| factorial(4)      |  <-- waiting for factorial(3)
-|-------------------|
-| factorial(3)      |  <-- waiting for factorial(2)
-|-------------------|
-| factorial(2)      |  <-- waiting for factorial(1)
-|-------------------|
-| factorial(1)      |  <-- base case, returns 1
-|-------------------|
-```
-
-When `factorial(1)` returns `1`, the stack starts to pop:
-
-```
-pop factorial(1) → factorial(2) computes 2*1 = 2, returns 2
-pop factorial(2) → factorial(3) computes 3*2 = 6, returns 6
-pop factorial(3) → factorial(4) computes 4*6 = 24, returns 24
-pop factorial(4) → factorial(5) computes 5*24 = 120, returns 120
-```
-
-After the final pop, the stack is empty and the original call `factorial(5)` has produced the final result `120`.
-
-### 4. Quick mental checklist
-
-| Question | Answer |
-|----------|--------|
-| **How many frames are created?** | One for each integer from 5 down to 1 → 5 frames. |
-| **Where does the actual multiplication happen?** | In each frame *after* the recursive call returns, i.e., `return n * factorial(n‑1)`. |
-| **When does the recursion stop?** | At the base case `n <= 1`, which returns `1` without further calls. |
-| **What is the final result?** | `120` (5 ! = 5 × 4 × 3 × 2 × 1). |
-
----
-
-#### TL;DR (one‑line summary)
-
-`factorial(5)` builds a stack of calls down to `factorial(1)`, then each call returns, multiplies its own `n` by the value returned from the deeper call, and passes that product back up, yielding `5 × 4 × 3 × 2 × 1 = 120`.","- `factorial(1)` returns **1**.  
-- `factorial(2)` receives that 1, multiplies by 2 → returns **2**.  
-- `factorial(3)` receives 2, multiplies by 3 → returns **6**.  
-- `factorial(4)` receives 6, multiplies by 4 → returns **24**.  
-- `factorial(5)` receives 24, multiplies by 5 → returns **120**.  
+Start by noting the base case: `factorial(1)` returns 1. Then, as each recursive call returns, the current call multiplies its own n by the value it just received. Look at the step where `factorial(3)` receives the result from `factorial(2)`. If you already know what `factorial(2)` returns, what does `factorial(3)` compute and return?
+</hint>","When the recursion unwinds, each call multiplies its own n by the value it just received:
+
+- `factorial(1)` hits the base case → returns **1**.  
+- `factorial(2)` receives 1 → computes `2 * 1` → returns **2**.  
+- `factorial(3)` receives 2 → computes `3 * 2` → returns **6**.  
+- `factorial(4)` receives 6 → computes `4 * 6` → returns **24**.  
+- `factorial(5)` receives 24 → computes `5 * 24` → returns **120**.
 
 So the final result of `factorial(5)` is **120**.",,,
-6,Q6_concept_stack_lifo,socratic,"1. When you call `push` with a new element, where in the internal list `_items` does that element end up—at the beginning, the middle, or the end?
+199,Q1_callstack_factorial,cot_tracing,"<reasoning>
+1. Call factorial(5)
+   - n = 5, condition n <= 1 is false.
+   - Needs to compute `5 * factorial(4)` → push current frame (n=5) onto call stack.
 
-2. After several `push` calls, if you look at `_items` from left to right, which element represents the one that was added most recently?
+2. Call factorial(4)
+   - n = 4, condition false.
+   - Needs to compute `4 * factorial(3)` → push frame (n=4).
 
-3. The `pop` method uses `self._items.pop()` without an index. What element does Python’s list `pop()` remove by default, and how does that relate to the element you identified as the most recent one?
+3. Call factorial(3)
+   - n = 3, condition false.
+   - Needs to compute `3 * factorial(2)` → push frame (n=3).
 
-4. If you repeatedly call `pop` until the stack is empty, in what order will the elements you originally pushed be returned—first‑in‑first‑out, last‑in‑first‑out, or something else?","After doing `push(1)`, `push(2)`, `push(3)` the internal list `_items` looks like `[1, 2, 3]`.  
-Calling `pop()` removes the last element of that list, which is `3`.  
-So `pop()` returns **3** because the stack is LIFO: the most recently pushed item (3) is the first one to be popped.",,,
-188,Q6_concept_stack_lifo,cot_tracing,"<reasoning>
-# Internal verification trace (not shown to the student)
+4. Call factorial(2)
+   - n = 2, condition false.
+   - Needs to compute `2 * factorial(1)` → push frame (n=2).
 
-We simulate a typical usage pattern to see how the internal list `_items` changes.
+5. Call factorial(1)
+   - n = 1, condition true.
+   - Returns 1 immediately. Pop frame (n=1) – no multiplication needed.
 
-1. **Create a Stack instance**
-   - `stack = Stack()`
-   - Internal state: `stack._items = []`
+Returning phase (unwinding the stack):
+6. Resume factorial(2):
+   - Received result from factorial(1) = 1.
+   - Compute `2 * 1 = 2`.
+   - Return 2. Pop frame (n=2).
 
-2. **First push**
-   - Call: `stack.push(1)`
-   - Operation: `self._items.append(1)`
-   - Internal state after operation: `stack._items = [1]`
+7. Resume factorial(3):
+   - Received result from factorial(2) = 2.
+   - Compute `3 * 2 = 6`.
+   - Return 6. Pop frame (n=3).
 
-3. **Second push**
-   - Call: `stack.push(2)`
-   - Operation: `self._items.append(2)`
-   - Internal state after operation: `stack._items = [1, 2]`
+8. Resume factorial(4):
+   - Received result from factorial(3) = 6.
+   - Compute `4 * 6 = 24`.
+   - Return 24. Pop frame (n=4).
 
-4. **Third push**
-   - Call: `stack.push(3)`
-   - Operation: `self._items.append(3)`
-   - Internal state after operation: `stack._items = [1, 2, 3]`
-
-5. **First pop**
-   - Call: `stack.pop()`
-   - Check: `if not self._items:` → False (list is not empty)
-   - Operation: `return self._items.pop()` → removes and returns the last element (`3`)
-   - Internal state after operation: `stack._items = [1, 2]`
-   - Returned value: `3`
-
-6. **Second pop**
-   - Call: `stack.pop()`
-   - Check: list not empty.
-   - Operation: `self._items.pop()` → removes and returns `2`
-   - Internal state after operation: `stack._items = [1]`
-   - Returned value: `2`
-
-7. **Third pop**
-   - Call: `stack.pop()`
-   - Operation: `self._items.pop()` → removes and returns `1`
-   - Internal state after operation: `stack._items = []`
-   - Returned value: `1`
-
-The sequence of returned values (`3, 2, 1`) is the reverse of the push order (`1, 2, 3`), demonstrating LIFO behavior.
-
-Key points observed:
-- `push` uses `list.append`, which adds to the *rightmost* end of the internal list.
-- `pop` uses `list.pop()` without an index, which removes from the *rightmost* end.
-- Because both operations act on the same end, the most recently added element is always the one removed first.
+9. Resume factorial(5):
+   - Received result from factorial(4) = 24.
+   - Compute `5 * 24 = 120`.
+   - Return 120. Pop frame (n=5). Call stack is now empty.
 </reasoning>
 <hint>
-Think about what part of the internal list the `push` method adds to and which part the `pop` method removes from. If you push the values 1, then 2, then 3, what will be the first value returned when you call `pop()`? What does that tell you about the order in which items leave the stack?
-</hint>","After `push(1)`, `push(2)`, and `push(3)` the internal list is `[1, 2, 3]`.  
-Calling `pop()` removes and returns the last element of that list, which is `3`.  
+Look at the moment when each recursive call gets the value back from the deeper call (e.g., when factorial(3) receives the result of factorial(2)). At that point, the multiplication for that frame is performed. What does factorial(3) compute once it receives the value from factorial(2)?
+</hint>","When the recursion unwinds, each frame multiplies its `n` by the value returned from the deeper call:
 
-So `pop()` returns the most recently pushed item (`3`). This happens because `push` appends to the end of the list and `pop` removes from the end, making the stack follow a Last‑In, First‑Out (LIFO) order.",,,
-9,Q3_debug_offbyone_linearsearch,socratic,"1. In the `for` loop of `linear_search_buggy`, what exact sequence of index values does `range(len(arr) - 1)` produce for a list of length 5?  
-
-2. Which index corresponds to the last element of the list, and does that index appear in the sequence you just identified?  
-
-3. If you wanted the loop to examine every element, how would the relationship between `len(arr)` and the range’s stop value need to change—think back to the off‑by‑one pattern you’ve seen before?","```python
-def linear_search_buggy(arr, target):
-    """"""Linear search over a list. Returns the index of target or -1.""""""
-    for i in range(len(arr)):
-        if arr[i] == target:
-            return i
-    return -1
-```
-I changed the loop to use `range(len(arr))` so it checks every element, including the last one.",,,
-204,Q1_callstack_factorial,zero_shot,"Sure! Let’s walk through exactly what happens when you call  
-
-```python
-factorial(5)
-```  
-
-with the implementation you have:
-
-```python
-def factorial(n):
-    """"""Recursive factorial. Base case n <= 1.""""""
-    if n <= 1:
-        return 1
-    return n * factorial(n - 1)
-```
-
-### 1. The “downward” phase – building the stack
-
-Each recursive call creates a **new stack frame** (a little “box” that stores the local variables for that call).  
-Think of the stack as a pile of plates: the most recent call is on the **top** of the pile.
-
-| Stack (top → bottom) | What the frame is waiting for |
-|----------------------|------------------------------|
-| `factorial(5)`       | result of `factorial(4)`     |
-| `factorial(4)`       | result of `factorial(3)`     |
-| `factorial(3)`       | result of `factorial(2)`     |
-| `factorial(2)`       | result of `factorial(1)`     |
-| `factorial(1)`       | **base case** – returns 1   |
-
-The calls happen in this order:
-
-1. `factorial(5)` sees `n > 1`, so it **calls** `factorial(4)`.
-2. `factorial(4)` calls `factorial(3)`.
-3. `factorial(3)` calls `factorial(2)`.
-4. `factorial(2)` calls `factorial(1)`.
-5. `factorial(1)` hits the base case (`n <= 1`) and **returns 1** immediately.
-
-At this point the “downward” phase stops – we have reached the base case and start **unwinding** the stack.
-
-### 2. The “upward” phase – multiplication as the calls return
-
-Now each pending call gets the value it was waiting for, performs the multiplication, and returns that result to the caller below it.
-
-| Step | Current frame (top) | Returned value from deeper call | What this frame returns |
-|------|---------------------|----------------------------------|--------------------------|
-| A    | `factorial(2)`      | got `1` from `factorial(1)`      | `2 * 1 = 2` → returns **2** |
-| B    | `factorial(3)`      | got `2` from `factorial(2)`      | `3 * 2 = 6` → returns **6** |
-| C    | `factorial(4)`      | got `6` from `factorial(3)`      | `4 * 6 = 24` → returns **24** |
-| D    | `factorial(5)`      | got `24` from `factorial(4)`     | `5 * 24 = 120` → returns **120** |
-
-Let’s see the actual code execution for each step:
-
-```python
-# A: inside factorial(2)
-return 2 * factorial(1)   # factorial(1) already gave 1
-# => returns 2
-
-# B: inside factorial(3)
-return 3 * factorial(2)   # factorial(2) just returned 2
-# => returns 6
-
-# C: inside factorial(4)
-return 4 * factorial(3)   # factorial(3) just returned 6
-# => returns 24
-
-# D: inside factorial(5)
-return 5 * factorial(4)   # factorial(4) just returned 24
-# => returns 120
-```
-
-### 3. Visual “stack diagram”
-
-```
-Call stack (top = most recent call)
-
-|-------------------|
-| factorial(5)      |  <-- waiting for factorial(4)
-|-------------------|
-| factorial(4)      |  <-- waiting for factorial(3)
-|-------------------|
-| factorial(3)      |  <-- waiting for factorial(2)
-|-------------------|
-| factorial(2)      |  <-- waiting for factorial(1)
-|-------------------|
-| factorial(1)      |  <-- base case, returns 1
-|-------------------|
-```
-
-When `factorial(1)` returns `1`, the stack starts to pop:
-
-```
-pop factorial(1) → factorial(2) computes 2*1 = 2, returns 2
-pop factorial(2) → factorial(3) computes 3*2 = 6, returns 6
-pop factorial(3) → factorial(4) computes 4*6 = 24, returns 24
-pop factorial(4) → factorial(5) computes 5*24 = 120, returns 120
-```
-
-After the final pop, the stack is empty and the original call `factorial(5)` has produced the final result `120`.
-
-### 4. Quick mental checklist
-
-| Question | Answer |
-|----------|--------|
-| **How many frames are created?** | One for each integer from 5 down to 1 → 5 frames. |
-| **Where does the actual multiplication happen?** | In each frame *after* the recursive call returns, i.e., `return n * factorial(n‑1)`. |
-| **When does the recursion stop?** | At the base case `n <= 1`, which returns `1` without further calls. |
-| **What is the final result?** | `120` (5 ! = 5 × 4 × 3 × 2 × 1). |
-
----
-
-#### TL;DR (one‑line summary)
-
-`factorial(5)` builds a stack of calls down to `factorial(1)`, then each call returns, multiplies its own `n` by the value returned from the deeper call, and passes that product back up, yielding `5 × 4 × 3 × 2 × 1 = 120`.","When the calls unwind:
-
-- `factorial(1)` returns **1**  
-- `factorial(2)` receives 1 → returns **2**  
-- `factorial(3)` receives 2 → returns **6**  
-- `factorial(4)` receives 6 → returns **24**  
-- `factorial(5)` receives 24 → returns **120**
+1. **factorial(1)** returns `1` (base case).  
+2. **factorial(2)** receives `1` from factorial(1) → returns `2 * 1 = 2`.  
+3. **factorial(3)** receives `2` from factorial(2) → returns `3 * 2 = 6`.  
+4. **factorial(4)** receives `6` from factorial(3) → returns `4 * 6 = 24`.  
+5. **factorial(5)** receives `24` from factorial(4) → returns `5 * 24 = 120`.
 
 So the final result of `factorial(5)` is **120**.",,,
-67,Q1_callstack_factorial,socratic,"1. When `factorial(5)` is invoked, what are the exact arguments passed to each successive recursive call until the base case is reached? List them in order.
+169,Q2_callstack_mergesort,cot_tracing,"<reasoning>
+**Step‑by‑step execution trace for `merge_sort([5, 3, 8, 1])`**
 
-2. At the deepest call (the one that hits `if n <= 1`), what value is returned, and how does that value become the result of the call just above it?
+1. **Call 1:** `merge_sort([5, 3, 8, 1])`  
+   - `len = 4 > 1` → `mid = 2`  
+   - **Left sub‑call** with `arr[:mid] = [5, 3]`  
+   - **Right sub‑call** with `arr[mid:] = [8, 1]`
 
-3. As the stack begins to unwind, how does the expression `n * factorial(n - 1)` use the value returned from the deeper call to compute the new result for the current `n`?
+2. **Call 2 (left side):** `merge_sort([5, 3])`  
+   - `len = 2 > 1` → `mid = 1`  
+   - **Left sub‑call** with `[5]`  
+   - **Right sub‑call** with `[3]`
 
-4. If you write down each return step from the deepest call back up to the original `factorial(5)`, what intermediate products do you see being formed before the final result is produced?","When the recursion unwinds, each call returns a value that is multiplied by its current `n`:
+3. **Call 3 (left‑left):** `merge_sort([5])`  
+   - `len = 1 ≤ 1` → **base case**, returns `[5]`
 
-- `factorial(1)` hits the base case and returns **1**.  
-- Returning to `factorial(2)`: it computes `2 * 1` → **2**.  
-- Returning to `factorial(3)`: it computes `3 * 2` → **6**.  
-- Returning to `factorial(4)`: it computes `4 * 6` → **24**.  
-- Returning to `factorial(5)`: it computes `5 * 24` → **120**.
+4. **Call 4 (left‑right):** `merge_sort([3])`  
+   - `len = 1 ≤ 1` → **base case**, returns `[3]`
 
-So the intermediate products are 1, 2, 6, 24, and the final result of `factorial(5)` is **120**.",,,
+5. **Merge 1:** `_merge(left=[5], right=[3])`  
+   - Init: `result = []`, `i = 0`, `j = 0`  
+   - Compare `5` (left[i]) vs `3` (right[j]): `3` is smaller → `result = [3]`, `j = 1`  
+   - `j` reached `len(right)`, exit loop.  
+   - Extend with remaining left: `result = [3, 5]`  
+   - Returns `[3, 5]`
+
+6. **Call 5 (right side):** `merge_sort([8, 1])`  
+   - `len = 2 > 1` → `mid = 1`  
+   - **Left sub‑call** with `[8]`  
+   - **Right sub‑call** with `[1]`
+
+7. **Call 6 (right‑left):** `merge_sort([8])` → base case, returns `[8]`
+
+8. **Call 7 (right‑right):** `merge_sort([1])` → base case, returns `[1]`
+
+9. **Merge 2:** `_merge(left=[8], right=[1])`  
+   - Init: `result = []`, `i = 0`, `j = 0`  
+   - Compare `8` vs `1`: `1` is smaller → `result = [1]`, `j = 1`  
+   - `j` reached `len(right)`, exit loop.  
+   - Extend with remaining left: `result = [1, 8]`  
+   - Returns `[1, 8]`
+
+10. **Final Merge:** `_merge(left=[3, 5], right=[1, 8])`  
+    - Init: `result = []`, `i = 0`, `j = 0`  
+    - Compare `3` vs `1`: `1` smaller → `result = [1]`, `j = 1`  
+    - Compare `3` vs `8`: `3` smaller → `result = [1, 3]`, `i = 1`  
+    - Compare `5` vs `8`: `5` smaller → `result = [1, 3, 5]`, `i = 2`  
+    - `i` reached `len(left)`, exit loop.  
+    - Extend with remaining right: `result = [1, 3, 5, 8]`  
+    - Returns `[1, 3, 5, 8]`
+
+**Variable snapshots at each merge:**
+- After Merge 1: `result = [3, 5]`
+- After Merge 2: `result = [1, 8]`
+- After Final Merge: `result = [1, 3, 5, 8]`
+
+The recursion tree:
+
+```
+                [5,3,8,1]
+               /          \
+          [5,3]            [8,1]
+         /    \           /    \
+       [5]    [3]       [8]    [1]
+```
+
+Each leaf returns itself; internal nodes merge their two children.
+
+</reasoning>
+<hint>
+Try drawing the recursion tree on paper, labeling each node with the sub‑list it receives. Focus on the first merge that happens after the two one‑element calls on the left side. 
+
+**Question:** When you merge the one‑element lists `[5]` and `[3]`, what list should you obtain before moving on to the next level? 
+</hint>","When you merge the one‑element lists `[5]` and `[3]`, you should get the list **`[3, 5]`** before moving on to the next level.
+
+**Recursion tree (sub‑lists at each level)**  
+
+| Level | Call | Left sub‑list | Right sub‑list | Result after merge |
+|-------|------|---------------|----------------|--------------------|
+| 0 | `merge_sort([5, 3, 8, 1])` | `[5, 3]` | `[8, 1]` | – |
+| 1‑left | `merge_sort([5, 3])` | `[5]` | `[3]` | `[3, 5]` |
+| 1‑right | `merge_sort([8, 1])` | `[8]` | `[1]` | `[1, 8]` |
+| 2 | merge `[3, 5]` and `[1, 8]` | `[3, 5]` | `[1, 8]` | **`[1, 3, 5, 8]`** |
+
+**Final merged list:** `[1, 3, 5, 8]`.",,,
 42,Q2_callstack_mergesort,zero_shot,"Below is a **step‑by‑step walk‑through** of what happens when you call  
 
 ```python
@@ -1196,66 +350,776 @@ If you follow those bookkeeping steps, the recursion tree stays clear even for d
 - `_merge([3, 5], [1, 8])` → **`[1, 3, 5, 8]`**
 
 So the final sorted list is `[1, 3, 5, 8]`.",,,
-177,Q4_debug_loopinvariant_bubblesort,cot_tracing,"<reasoning>
+153,Q6_concept_stack_lifo,socratic,"1. When you call `push` with a new element, where does that element end up in the internal `_items` list—at the beginning, the middle, or the end?
+
+2. After several `push` calls, if you then call `pop`, which index of `_items` does the `pop` method remove and return? How does that relate to the element that was added most recently?
+
+3. If you performed the sequence `push(A)`, `push(B)`, `push(C)`, then called `pop()` three times, what order would you see the values returned? Why does that order illustrate “last‑in, first‑out”?
+
+4. How does the `is_empty` method help ensure that `pop` only removes an element when there is one present, preserving the LIFO behavior without causing an error?","After `push(1)`, `push(2)`, `push(3)` the internal list is `[1, 2, 3]`.  
+Calling `pop()` removes and returns the last element of that list, which is `3`.  
+So `pop()` returns **3** because the most recently pushed item is the one that comes out first in a LIFO stack.",,,
+50,Q6_concept_stack_lifo,cot_tracing,"<reasoning>
+1. **Initial state** – When a `Stack` instance is created, `self._items` is an empty list `[]`.
+
+2. **First push** – Call `stack.push(1)`.  
+   - Inside `push`, `self._items.append(1)` is executed.  
+   - New state of `self._items`: `[1]`.
+
+3. **Second push** – Call `stack.push(2)`.  
+   - `self._items.append(2)` adds `2` to the end of the list.  
+   - New state of `self._items`: `[1, 2]`.
+
+4. **Third push** – Call `stack.push(3)`.  
+   - `self._items.append(3)` adds `3` to the end.  
+   - New state of `self._items`: `[1, 2, 3]`.
+
+5. **First pop** – Call `stack.pop()`.  
+   - `pop` first checks `if not self._items:` – the list is non‑empty, so no error.  
+   - It then executes `return self._items.pop()`.  
+   - Python’s list `pop()` without an index removes and returns the **last** element, which is `3`.  
+   - After removal, `self._items` becomes `[1, 2]`.  
+   - The method returns `3`.
+
+6. **Second pop** – Call `stack.pop()` again.  
+   - The list is `[1, 2]`; `self._items.pop()` removes and returns `2`.  
+   - New state: `[1]`.  
+   - Returns `2`.
+
+7. **Third pop** – Call `stack.pop()` a final time.  
+   - The list is `[1]`; `self._items.pop()` removes and returns `1`.  
+   - New state: `[]`.  
+   - Returns `1`.
+
+Throughout these operations, items are added to the *end* of the internal list and removed from the *end* as well, which is exactly the Last‑In‑First‑Out (LIFO) behavior expected of a stack.
+</reasoning>
+<hint>
+Look at the order in which items appear in `self._items` after each `push`. After pushing three values, what does the internal list contain? When you then call `pop`, which element (by position) is removed and returned? Based on that, what value would the first `pop` give you? 
+</hint>","After `push(1)`, `push(2)`, `push(3)` the internal list is `[1, 2, 3]`.  
+`pop()` removes the last element of that list (`self._items.pop()`), so it returns `3`.  
+Thus the first `pop()` gives you the most recently pushed item, following LIFO order.",,,
+33,Q3_debug_offbyone_linearsearch,cot_tracing,"<reasoning>
+**Scenario:** `arr = [2, 4, 6, 8, 10]`, `target = 10` (the last element, index 4).
+
+1. **Initialize loop:**  
+   - `len(arr) = 5`  
+   - `range(len(arr) - 1)` → `range(4)` → sequence of `i` values: **0, 1, 2, 3**.
+
+2. **Iteration 1 (`i = 0`):**  
+   - `arr[0] = 2` ≠ `target` → continue.
+
+3. **Iteration 2 (`i = 1`):**  
+   - `arr[1] = 4` ≠ `target` → continue.
+
+4. **Iteration 3 (`i = 2`):**  
+   - `arr[2] = 6` ≠ `target` → continue.
+
+5. **Iteration 4 (`i = 3`):**  
+   - `arr[3] = 8` ≠ `target` → continue.
+
+6. **Loop termination:**  
+   - The loop stops because the next `i` would be `4`, but the range stops at `3`.  
+   - The body never evaluates `arr[4]`, which holds the target value `10`.
+
+7. **Return statement:**  
+   - After the loop, the function reaches `return -1`, indicating “not found”.
+
+**Result:** The function never checks the element at index `len(arr) - 1`, so a target located at the very end is missed.
+
+---
+
+**What would happen if the loop iterated over `range(len(arr))` instead?**  
+- The sequence of `i` values would be **0, 1, 2, 3, 4**, allowing the final element to be examined.  
+- The function would return `4` when `target = 10`.
+
+This demonstrates that the off‑by‑one bound in the `for` loop is the source of the bug.
+</reasoning>
+<hint>
+Look at the `for` loop header: `for i in range(len(arr) - 1):`.  
+What is the highest value that `i` can take during the loop for a list of length 5?  
+How does that compare to the index of the last element?  
+What should the upper bound be so that the last index is included?
+</hint>","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to iterate over `range(len(arr))` so the last index is included.",,,
+100,Q3_debug_offbyone_linearsearch,cot_tracing,"<reasoning>
 **Function under inspection**
 
 ```python
-def bubble_sort_buggy(arr):
-    n = len(arr)
-    for i in range(n - 1):          # outer loop
-        for j in range(n - i - 2):  # inner loop
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-    return arr
+def linear_search_buggy(arr, target):
+    for i in range(len(arr) - 1):
+        if arr[i] == target:
+            return i
+    return -1
 ```
 
-**Goal of bubble sort**  
-For each outer‑loop iteration `i`, the inner loop must compare every adjacent pair up to the last unsorted element, i.e. indices `0 … n‑i‑2` **inclusive** (so the loop runs while `j <= n‑i‑2`). In Python `range(stop)` iterates up to `stop‑1`. Therefore the inner loop should be `range(n - i - 1)`.
+**Goal:** Find the index of `target` in `arr`.  
 
-**Step‑by‑step trace with a concrete array**  
-Take `arr = [5, 2, 4, 1]` (length `n = 4`).
+**Test case that fails:**  
 
-1. **Outer iteration `i = 0`**  
-   - Expected inner bound: compare indices `0‑2` (pairs (0,1), (1,2), (2,3)).  
-   - **Buggy code** uses `range(n - i - 2) = range(2)`, so `j` takes values `0, 1` only:
-     - `j = 0`: compare `5 > 2` → swap → `arr = [2, 5, 4, 1]`
-     - `j = 1`: compare `5 > 4` → swap → `arr = [2, 4, 5, 1]`
-     - **Missing comparison** `j = 2` (pair (5,1)) → 5 stays before 1.
-   - Array after first outer pass: `[2, 4, 5, 1]` (largest element 5 has not bubbled to the end).
+```python
+arr = [4, 7, 2, 9, 5]   # length = 5
+target = 5               # target is at index 4 (the last position)
+```
 
-2. **Outer iteration `i = 1`**  
-   - Buggy inner bound: `range(n - i - 2) = range(1)`, so only `j = 0`:
-     - `j = 0`: compare `2 > 4` → no swap.
-   - No comparison of the pair `(4,5)` or `(5,1)`.  
-   - Array remains `[2, 4, 5, 1]`.
+**Step‑by‑step execution**
 
-3. **Outer iteration `i = 2`**  
-   - Buggy inner bound: `range(0)` → inner loop does not run at all.  
-   - Array unchanged.
+| Step | `i` (loop variable) | `arr[i]` | Comparison `arr[i] == target` | Action |
+|------|---------------------|----------|-------------------------------|--------|
+| 1    | `range(len(arr) - 1)` → `range(4)` → first value `0` | `arr[0] = 4` | `4 == 5` → **False** | Continue loop |
+| 2    | `i = 1` | `arr[1] = 7` | `7 == 5` → **False** | Continue loop |
+| 3    | `i = 2` | `arr[2] = 2` | `2 == 5` → **False** | Continue loop |
+| 4    | `i = 3` | `arr[3] = 9` | `9 == 5` → **False** | Continue loop |
+| 5    | Loop ends because `range(4)` produces only `0,1,2,3`. | — | — | Exit loop, reach `return -1` |
 
-**Result** after all outer iterations: `[2, 4, 5, 1]` – the last two elements are still out of order, exactly the symptom reported.
+**Observation:**  
+- The loop iterates over `range(len(arr) - 1)`.  
+- For an array of length `5`, `range(4)` yields indices `0` through `3`.  
+- Index `4` (the last element) is never examined, so the function cannot ever return `4`.  
 
-**What the correct bound should be**  
-If the inner loop were `range(n - i - 1)`, then for `i = 0` it would iterate `j = 0,1,2`, performing the missing comparison and moving the largest element to the end. Subsequent outer passes would then correctly bubble the remaining unsorted elements.
+**Result:** The function returns `-1` even though the target exists at the last index.
 
-Thus the bug originates from the inner loop’s stop value `n - i - 2`, which is one too small.
+**Root cause:** An off‑by‑one error in the loop’s range expression, which excludes the final index of the list.  
+</reasoning>
 
+<hint>
+Look at the `for` loop header: `for i in range(len(arr) - 1):`.  
+What value does `range(len(arr) - 1)` produce when `len(arr) = 5`?  
+How could you adjust the range so that the loop also checks the element at index 4?  
+What should the upper bound be to include the last index of any list?  
+</hint>","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1
+```
+
+I changed the loop to `range(len(arr))` so it checks the last element as well.",,,
+123,Q6_concept_stack_lifo,no_tutor_control,,"After doing `push(1)`, `push(2)`, and `push(3)`, the stack’s internal list looks like `[1, 2, 3]`.  
+Calling `pop()` removes and returns the last element of that list, which is `3`.  
+
+**Why?**  
+* `push(item)` appends the new item to the end of the list (`self._items.append(item)`), so the most recently pushed item is always at the end.  
+* `pop()` uses `self._items.pop()`, which by default removes and returns the element at the end of the list.  
+
+Because the last item pushed (`3`) is at the end, `pop()` returns `3`, demonstrating the LIFO (last‑in, first‑out) behavior.",,,
+203,Q2_callstack_mergesort,cot_tracing,"<reasoning>
+**Initial call**
+- `merge_sort([5, 3, 8, 1])`
+  - `len(arr)=4` → `mid = 4 // 2 = 2`
+  - `left` sub‑list = `arr[:mid] = [5, 3]`
+  - `right` sub‑list = `arr[mid:] = [8, 1]`
+  - Calls: `merge_sort([5, 3])` and `merge_sort([8, 1])`
+
+**First recursive branch – left side**
+1. `merge_sort([5, 3])`
+   - `len=2` → `mid = 1`
+   - `left` = `[5]`, `right` = `[3]`
+   - Calls: `merge_sort([5])` and `merge_sort([3])`
+2. `merge_sort([5])` → base case (`len≤1`), returns `[5]`
+3. `merge_sort([3])` → base case, returns `[3]`
+4. `_merge(left=[5], right=[3])`
+   - `i=0, j=0, result=[]`
+   - Compare `5` vs `3` → `3` smaller → `result=[3]`, `j=1`
+   - `j` reached end → extend remaining `left[i:]` → `result=[3,5]`
+   - Returns `[3,5]` (sorted left half)
+
+**Second recursive branch – right side**
+1. `merge_sort([8, 1])`
+   - `len=2` → `mid = 1`
+   - `left` = `[8]`, `right` = `[1]`
+   - Calls: `merge_sort([8])` and `merge_sort([1])`
+2. `merge_sort([8])` → base case, returns `[8]`
+3. `merge_sort([1])` → base case, returns `[1]`
+4. `_merge(left=[8], right=[1])`
+   - `i=0, j=0, result=[]`
+   - Compare `8` vs `1` → `1` smaller → `result=[1]`, `j=1`
+   - `j` reached end → extend remaining `left[i:]` → `result=[1,8]`
+   - Returns `[1,8]` (sorted right half)
+
+**Final merge**
+- Back in the original call: `left = [3,5]`, `right = [1,8]`
+- `_merge(left=[3,5], right=[1,8])`
+  - `i=0, j=0, result=[]`
+  - Compare `3` vs `1` → `1` smaller → `result=[1]`, `j=1`
+  - Compare `3` vs `8` → `3` smaller → `result=[1,3]`, `i=1`
+  - Compare `5` vs `8` → `5` smaller → `result=[1,3,5]`, `i=2`
+  - `i` reached end → extend remaining `right[j:]` → `result=[1,3,5,8]`
+  - Returns `[1,3,5,8]` (fully sorted list)
+</reasoning>
+
+<hint>
+Try writing down the call stack as you go deeper: each time `merge_sort` is invoked, note the current sub‑list, its length, the computed `mid`, and the two slices that become the next “left” and “right” arguments.  
+Start with the first split of `[5, 3, 8, 1]` and then focus on the left branch `[5, 3]`. What are the exact values of `mid`, the left slice, and the right slice when `merge_sort` is called on `[5, 3]`? Once you have those, can you predict which two single‑element lists will be merged next?","Here’s the call‑stack I traced:
+
+| Call | Input list | `mid` | Left slice | Right slice |
+|------|------------|-------|------------|-------------|
+| 1 | `[5, 3, 8, 1]` | 2 | `[5, 3]` | `[8, 1]` |
+| 2 | `[5, 3]` | 1 | `[5]` | `[3]` |
+| 3 | `[5]` | – | – | – (base case) |
+| 4 | `[3]` | – | – | – (base case) |
+| 5 | `[8, 1]` | 1 | `[8]` | `[1]` |
+| 6 | `[8]` | – | – | – (base case) |
+| 7 | `[1]` | – | – | – (base case) |
+
+Merging steps (shown in order of return):
+
+1. Merge `[5]` and `[3]` → `[3, 5]`
+2. Merge `[8]` and `[1]` → `[1, 8]`
+3. Merge `[3, 5]` and `[1, 8]` → `[1, 3, 5, 8]`
+
+**Final merged list:** `[1, 3, 5, 8]`.",,,
+82,Q1_callstack_factorial,socratic,"1. When `factorial(5)` calls `factorial(4)`, what value does the call `factorial(4)` return before the multiplication in the `factorial(5)` frame can be performed?
+
+2. After `factorial(4)` has returned, what is the current value of `n` in the `factorial(5)` frame, and how does that value combine with the returned result?
+
+3. If you list the return values from the deepest call `factorial(1)` upward, how does each step’s multiplication build the final result? (Think about the pattern you saw when a stack overflow occurred previously.)","- `factorial(1)` returns **1**  
+- `factorial(2)` returns **2 × 1 = 2**  
+- `factorial(3)` returns **3 × 2 = 6**  
+- `factorial(4)` returns **4 × 6 = 24**  
+- `factorial(5)` returns **5 × 24 = 120**  
+
+So the final result of `factorial(5)` is **120**.",,,
+106,Q1_callstack_factorial,socratic,"1. When `factorial(5)` calls `factorial(4)`, what value does the current call **wait** for before it can finish its own `return` statement?
+
+2. After the deepest call `factorial(1)` returns `1`, what is the exact expression that the `factorial(2)` call evaluates to compute its result?
+
+3. As each recursive call returns, how does the value returned from the inner call become the left‑hand operand of the multiplication in the outer call? (Think of the order in which the stack frames are popped.)","When the recursion unwinds, each call receives the value from the deeper call and multiplies it by its own `n`:
+
+| Call | Returned value | Reason |
+|------|----------------|--------|
+| `factorial(1)` | `1` | Base case (`n <= 1`) returns 1. |
+| `factorial(2)` | `2 * 1 = 2` | Uses the 1 returned from `factorial(1)`. |
+| `factorial(3)` | `3 * 2 = 6` | Uses the 2 returned from `factorial(2)`. |
+| `factorial(4)` | `4 * 6 = 24` | Uses the 6 returned from `factorial(3)`. |
+| `factorial(5)` | `5 * 24 = 120` | Uses the 24 returned from `factorial(4)`. |
+
+So the final result of `factorial(5)` is **120**.",,,
+210,Q1_callstack_factorial,cot_tracing,"<reasoning>
+**Initial call**
+- `factorial(5)` is invoked.
+- Since `5 > 1`, execution proceeds to `return 5 * factorial(4)`.
+
+**First recursive layer**
+- `factorial(4)` is called.
+- `4 > 1`, so it will return `4 * factorial(3)`.
+
+**Second recursive layer**
+- `factorial(3)` is called.
+- `3 > 1`, so it will return `3 * factorial(2)`.
+
+**Third recursive layer**
+- `factorial(2)` is called.
+- `2 > 1`, so it will return `2 * factorial(1)`.
+
+**Base case**
+- `factorial(1)` is called.
+- Condition `n <= 1` is true → returns `1`.
+
+**Unwinding the stack**
+1. Return to `factorial(2)`:
+   - Received result from `factorial(1)` = `1`.
+   - Computes `2 * 1 = 2`.
+   - Returns `2` to its caller.
+2. Return to `factorial(3)`:
+   - Received result from `factorial(2)` = `2`.
+   - Computes `3 * 2 = 6`.
+   - Returns `6` to its caller.
+3. Return to `factorial(4)`:
+   - Received result from `factorial(3)` = `6`.
+   - Computes `4 * 6 = 24`.
+   - Returns `24` to its caller.
+4. Return to `factorial(5)`:
+   - Received result from `factorial(4)` = `24`.
+   - Computes `5 * 24 = 120`.
+   - Returns `120` as the final result.
+
+**Stack snapshot at each return point**
+- After `factorial(1)` returns: stack = `[factorial(2), factorial(3), factorial(4), factorial(5)]`
+- After `factorial(2)` returns: stack = `[factorial(3), factorial(4), factorial(5)]`
+- After `factorial(3)` returns: stack = `[factorial(4), factorial(5)]`
+- After `factorial(4)` returns: stack = `[factorial(5)]`
+- After `factorial(5)` returns: stack = `[]` (empty)
+
+The multiplication occurs **exactly when each call receives the result of its deeper call** and then multiplies that result by its own `n` before returning.
 </reasoning>
 <hint>
-Look at the line `for j in range(n - i - 2):`.  
-What is the highest index `j` should reach during the first outer iteration (`i = 0`) so that the pair containing the last element gets compared? Compute the correct `range` stop value for that iteration. What should the inner loop’s range expression be? 
-</hint>","```python
-def bubble_sort_buggy(arr):
+Look at the moment when `factorial(3)` gets the value back from `factorial(2)`. What two numbers are multiplied there, and what should that product be? Once you have that, you can see how the next level (`factorial(4)`) uses the result. What is the multiplication performed in `factorial(3)`? 
+</hint>","When the recursion unwinds:
+
+- `factorial(1)` hits the base case and returns **1**.  
+- `factorial(2)` receives that 1 and returns **2 × 1 = 2**.  
+- `factorial(3)` receives the 2 and returns **3 × 2 = 6**.  
+- `factorial(4)` receives the 6 and returns **4 × 6 = 24**.  
+- `factorial(5)` receives the 24 and returns **5 × 24 = 120**.
+
+So the final result of `factorial(5)` is **120**.",,,
+60,Q1_callstack_factorial,socratic,"1. When `factorial(5)` is first called, what is the value of `n` that each subsequent recursive call receives, and what condition stops the recursion?
+
+2. After the deepest call returns its result, what does the expression `n * factorial(n‑1)` evaluate to for that specific `n`? How does that value become the return value for the next higher call on the stack?
+
+3. If you list the calls in the order they finish (the return phase), what sequence of intermediate results do you see, and how does each result get multiplied by the `n` from its own call frame?","**Return values on the way back up**
+
+| Call | `n` | Expression evaluated | Result returned |
+|------|-----|----------------------|-----------------|
+| `factorial(1)` | 1 | `1 * factorial(0)` → `1 * 1` | **1** |
+| `factorial(2)` | 2 | `2 * factorial(1)` → `2 * 1` | **2** |
+| `factorial(3)` | 3 | `3 * factorial(2)` → `3 * 2` | **6** |
+| `factorial(4)` | 4 | `4 * factorial(3)` → `4 * 6` | **24** |
+| `factorial(5)` | 5 | `5 * factorial(4)` → `5 * 24` | **120** |
+
+**Final result**
+
+`factorial(5)` returns **120**.",,,
+209,Q5_concept_search_complexity,no_tutor_control,,"Binary search runs in O(log n) time on a sorted array, while a linear search takes O(n) time regardless of sorting. Use binary search when the data is sorted and you need fast look‑ups; use linear search for small or unsorted lists, or when sorting would cost more than the search benefit.",,,
+174,Q4_debug_loopinvariant_bubblesort,zero_shot,"### What’s happening?
+
+In a classic bubble‑sort you need to compare **every adjacent pair** that hasn’t already been “bubbled” to its final position.  
+For an array of length `n` the inner loop must run up to index `n‑i‑2` **inclusive**, i.e. the range should be `range(0, n‑i‑1)`.  
+
+Your code uses:
+
+```python
+for j in range(n - i - 2):
+```
+
+When `i` is `0` this iterates only up to `j = n‑3`.  
+The pair `(arr[n‑2], arr[n‑1])` is never examined, so the last two elements can stay out of order.  
+That’s why the sort sometimes finishes with the final two items swapped.
+
+### Fixing the loop bounds
+
+```python
+def bubble_sort(arr):
     """"""Bubble sort. Sorts the list in place and returns it.""""""
     n = len(arr)
+    # We need n‑1 passes (the last pass is unnecessary but harmless)
     for i in range(n - 1):
-        # Compare up to the last unsorted element
+        # Compare up to the element just before the already‑sorted suffix
         for j in range(n - i - 1):
             if arr[j] > arr[j + 1]:
                 arr[j], arr[j + 1] = arr[j + 1], arr[j]
     return arr
 ```
-I changed the inner loop to `range(n - i - 1)` so the last pair is compared each pass.",,,
+
+**Why this works**
+
+* `range(n - i - 1)` generates `j = 0 … n‑i‑2`.  
+  The last `j` in each pass is `n‑i‑2`, so the comparison `arr[j] > arr[j+1]` checks the pair `(arr[n‑i‑2], arr[n‑i‑1])`.  
+* As `i` grows, the “sorted” suffix at the right end of the list gets larger, so we stop one element earlier each pass.
+
+### Quick sanity check
+
+```python
+>>> bubble_sort([5, 2, 9, 1, 5, 6])
+[1, 2, 5, 5, 6, 9]
+
+>>> import random
+>>> for _ in range(1000):
+...     a = random.sample(range(1000), 20)   # 20 distinct numbers
+...     if bubble_sort(a[:]) != sorted(a):
+...         print(""mismatch!"")
+...         break
+... else:
+...     print(""All good!"")
+All good!
+```
+
+Now the function reliably sorts the entire list, including the last two elements.","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):   # include the last adjacent pair
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+I changed the inner loop bound from `range(n - i - 2)` to `range(n - i - 1)` so the last adjacent pair is compared each pass.",,,
+98,Q6_concept_stack_lifo,zero_shot,"Sure! Let’s walk through the `Stack` class you have and see how its two core methods—`push` and `pop`—make the data structure behave as a **LIFO** (Last‑In‑First‑Out) container.
+
+### 1. The underlying storage
+```python
+self._items = []
+```
+The stack keeps its elements in a plain Python list called `_items`. Think of this list as a pile of plates: the **right‑most** element (the one at the highest index) is the plate that’s on top of the pile.
+
+### 2. `push(item)` – putting something on the top
+```python
+def push(self, item):
+    self._items.append(item)
+```
+* `list.append` adds the new element **to the end of the list**.
+* Because the “top” of our stack is defined as the end of the list, the newly appended item becomes the **most recent** (i.e., the last) element.
+* Every time you call `push`, you’re effectively placing a new plate on top of the stack.
+
+### 3. `pop()` – taking the top element off
+```python
+def pop(self):
+    if not self._items:
+        raise IndexError(""pop from empty stack"")
+    return self._items.pop()
+```
+* `list.pop()` without an index removes **the last element** of the list and returns it.
+* Since the last element is exactly the one we most recently `append`ed, `pop` always returns the **most recently pushed** item.
+* If the list is empty, we raise an error because there’s nothing to remove—this mirrors the real‑world rule that you can’t take a plate from an empty pile.
+
+### 4. Why this is LIFO
+* **Last‑In**: The most recent call to `push` puts an item at the end of `_items`.
+* **First‑Out**: The next call to `pop` removes that same item (the one at the end) before any older items.
+* Consequently, the order of removal is the exact reverse of the order of insertion—exactly what “last‑in‑first‑out” means.
+
+### 5. Supporting methods (optional but helpful)
+
+| Method | What it does | How it relates to LIFO |
+|--------|--------------|------------------------|
+| `peek()` | Returns `self._items[-1]` (the top element) **without** removing it. | Lets you look at the “last‑in” element while keeping the LIFO order intact. |
+| `is_empty()` | Checks `len(self._items) == 0`. | Useful to know when a `pop` would raise an error. |
+
+### Visual example
+
+```python
+s = Stack()
+s.push('A')   # stack: ['A']
+s.push('B')   # stack: ['A', 'B']   <-- 'B' is on top
+s.push('C')   # stack: ['A', 'B', 'C'] <-- 'C' is on top
+
+print(s.pop())   # -> 'C' (last pushed, first popped)
+print(s.pop())   # -> 'B'
+print(s.pop())   # -> 'A'
+```
+
+Notice how the elements come out in the reverse order of how they went in—that’s the hallmark of LIFO.
+
+---
+
+**In short:** `push` appends to the end of the internal list, making the new item the “top” of the stack, and `pop` removes from that same end, guaranteeing that the most recently added item is always the one that leaves first. This simple pair of list operations is all you need to enforce LIFO behavior.","After doing  
+
+```python
+push(1)
+push(2)
+push(3)
+```
+
+the stack’s internal list is `[1, 2, 3]` – the right‑most element is the most recent one.  
+Calling `pop()` removes and returns that right‑most element, so it returns **3**.  
+It’s 3 because it was the last item pushed, and `pop()` always takes the last‑in item first (LIFO).",,,
+188,Q6_concept_stack_lifo,cot_tracing,"<reasoning>
+# Internal verification trace (not shown to the student)
+
+We simulate a typical usage pattern to see how the internal list `_items` changes.
+
+1. **Create a Stack instance**
+   - `stack = Stack()`
+   - Internal state: `stack._items = []`
+
+2. **First push**
+   - Call: `stack.push(1)`
+   - Operation: `self._items.append(1)`
+   - Internal state after operation: `stack._items = [1]`
+
+3. **Second push**
+   - Call: `stack.push(2)`
+   - Operation: `self._items.append(2)`
+   - Internal state after operation: `stack._items = [1, 2]`
+
+4. **Third push**
+   - Call: `stack.push(3)`
+   - Operation: `self._items.append(3)`
+   - Internal state after operation: `stack._items = [1, 2, 3]`
+
+5. **First pop**
+   - Call: `stack.pop()`
+   - Check: `if not self._items:` → False (list is not empty)
+   - Operation: `return self._items.pop()` → removes and returns the last element (`3`)
+   - Internal state after operation: `stack._items = [1, 2]`
+   - Returned value: `3`
+
+6. **Second pop**
+   - Call: `stack.pop()`
+   - Check: list not empty.
+   - Operation: `self._items.pop()` → removes and returns `2`
+   - Internal state after operation: `stack._items = [1]`
+   - Returned value: `2`
+
+7. **Third pop**
+   - Call: `stack.pop()`
+   - Operation: `self._items.pop()` → removes and returns `1`
+   - Internal state after operation: `stack._items = []`
+   - Returned value: `1`
+
+The sequence of returned values (`3, 2, 1`) is the reverse of the push order (`1, 2, 3`), demonstrating LIFO behavior.
+
+Key points observed:
+- `push` uses `list.append`, which adds to the *rightmost* end of the internal list.
+- `pop` uses `list.pop()` without an index, which removes from the *rightmost* end.
+- Because both operations act on the same end, the most recently added element is always the one removed first.
+</reasoning>
+<hint>
+Think about what part of the internal list the `push` method adds to and which part the `pop` method removes from. If you push the values 1, then 2, then 3, what will be the first value returned when you call `pop()`? What does that tell you about the order in which items leave the stack?
+</hint>","After `push(1)`, `push(2)`, and `push(3)` the internal list is `[1, 2, 3]`.  
+Calling `pop()` removes and returns the last element of that list, which is `3`.  
+
+So `pop()` returns the most recently pushed item (`3`). This happens because `push` appends to the end of the list and `pop` removes from the end, making the stack follow a Last‑In, First‑Out (LIFO) order.",,,
+217,Q1_callstack_factorial,zero_shot,"Sure! Let’s walk through the execution of the recursive `factorial` function for the input `5` and see exactly how the call stack is built and then unwound, performing the multiplications.
+
+```python
+def factorial(n):
+    """"""Recursive factorial. Base case n <= 1.""""""
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+```
+
+### 1. What the call stack looks like while we *go down* (the “recursive descent”)
+
+When a function calls itself, a **new stack frame** is pushed onto the call stack.  
+Each frame remembers:
+
+* the value of `n` for that call,
+* where it should return to (the line after the `return` statement).
+
+Below is the sequence of frames that get pushed, from the first call to the deepest one:
+
+| Stack depth (top = most recent) | `n` value in this frame | What the frame will do when it returns |
+|---------------------------------|------------------------|----------------------------------------|
+| 1 (bottom)                      | `5`                    | `return 5 * result_of_factorial(4)`   |
+| 2                               | `4`                    | `return 4 * result_of_factorial(3)`   |
+| 3                               | `3`                    | `return 3 * result_of_factorial(2)`   |
+| 4                               | `2`                    | `return 2 * result_of_factorial(1)`   |
+| 5 (top)                         | `1`                    | **Base case** → returns `1`           |
+
+Visually (most‑recent on top):
+
+```
++-------------------+
+| factorial(1) -> 1|   <-- top of stack
++-------------------+
+| factorial(2)      |
++-------------------+
+| factorial(3)      |
++-------------------+
+| factorial(4)      |
++-------------------+
+| factorial(5)      |
++-------------------+   <-- bottom of stack (original call)
+```
+
+### 2. The *unwinding* phase – where the multiplication actually happens
+
+Now that the base case has been hit, the function starts returning values. Each return pops the top frame, substitutes the returned value into the pending multiplication, and then returns the new result to the next frame down.
+
+Let’s follow the steps:
+
+| Step | Returning from | Value returned to caller | What the caller computes |
+|------|----------------|--------------------------|--------------------------|
+| A    | `factorial(1)` | `1`                      | — (base case)            |
+| B    | `factorial(2)` | receives `1` from step A | computes `2 * 1 = 2` → returns `2` |
+| C    | `factorial(3)` | receives `2` from step B | computes `3 * 2 = 6` → returns `6` |
+| D    | `factorial(4)` | receives `6` from step C | computes `4 * 6 = 24` → returns `24` |
+| E    | `factorial(5)` | receives `24` from step D| computes `5 * 24 = 120` → returns `120` |
+
+So the final result of `factorial(5)` is **120**.
+
+### 3. A step‑by‑step trace (including the stack state)
+
+Below is a more explicit “trace” that shows the stack after each call and after each return.
+
+```
+# Call factorial(5)
+push factorial(5)          # stack: [5]
+
+# Call factorial(4)
+push factorial(4)          # stack: [5, 4]
+
+# Call factorial(3)
+push factorial(3)          # stack: [5, 4, 3]
+
+# Call factorial(2)
+push factorial(2)          # stack: [5, 4, 3, 2]
+
+# Call factorial(1)  <-- base case
+push factorial(1)          # stack: [5, 4, 3, 2, 1]
+return 1
+pop factorial(1)           # stack: [5, 4, 3, 2]
+
+# Back in factorial(2)
+compute 2 * 1 = 2
+return 2
+pop factorial(2)           # stack: [5, 4, 3]
+
+# Back in factorial(3)
+compute 3 * 2 = 6
+return 6
+pop factorial(3)           # stack: [5, 4]
+
+# Back in factorial(4)
+compute 4 * 6 = 24
+return 24
+pop factorial(4)           # stack: [5]
+
+# Back in factorial(5)
+compute 5 * 24 = 120
+return 120
+pop factorial(5)           # stack: []
+```
+
+When the stack is empty again, the original call has finished and the caller (your top‑level code) receives `120`.
+
+### 4. Why the multiplication happens *on the way back*
+
+The line
+
+```python
+return n * factorial(n - 1)
+```
+
+does two things:
+
+1. **Calls** `factorial(n‑1)` → this creates a new frame and pauses the current one.
+2. **Waits** for that call to finish, then multiplies the returned value by the current `n`.
+
+Because the multiplication is written *after* the recursive call, the actual `*` operation cannot be performed until the recursive call has produced its result. That’s why you see the “downward” phase (just building frames) followed by the “upward” phase (doing the multiplications).
+
+---
+
+#### TL;DR
+
+- Calls are stacked: `5 → 4 → 3 → 2 → 1`.
+- `factorial(1)` returns `1`.
+- Each previous frame multiplies its own `n` by the value it just received:
+  - `2 * 1 = 2`
+  - `3 * 2 = 6`
+  - `4 * 6 = 24`
+  - `5 * 24 = 120`
+- The final answer is `120`.
+
+I hope this makes the flow of the call stack and the timing of the multiplications crystal‑clear! If you’d like to see a visual diagram or experiment with a different number, just let me know.","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199172, Requested 2074. Please try again in 8m58.272s. Need more tokens? Up",,,
+131,Q6_concept_stack_lifo,socratic,"1. After calling `push` several times, where in the internal `_items` list does the most recently added element reside?  
+
+2. When `pop` is executed, which index of `_items` is removed and returned, and why does that correspond to the element you just pushed?  
+
+3. If you were to `push` the values 1, 2, 3 in that order and then call `pop` three times, what sequence of values would you obtain, and how does that illustrate LIFO behavior?","After `push(1)`, `push(2)`, `push(3)` the internal list is `[1, 2, 3]`.  
+Calling `pop()` removes and returns the last element of that list, which is `3`.  
+Because `push` always appends to the end and `pop` always removes from the end, the most recently added item (`3`) is the one that comes out first—exactly the LIFO (last‑in, first‑out) behavior.",,,
+211,Q4_debug_loopinvariant_bubblesort,zero_shot,"### What’s happening?
+
+`bubble_sort_buggy` tries to “bubble” the largest element to the end of the list on each outer‑loop pass.  
+For a list of length `n` the inner loop must compare **every adjacent pair** that has not already been placed at the end.  
+
+Your inner loop is written as
+
+```python
+for j in range(n - i - 2):
+```
+
+When `i = 0` (the first pass) this iterates over `j = 0 … n‑3`.  
+That means the comparison between the elements at indices `n‑2` and `n‑1` (the **last two items**) never happens.  
+Consequently, if the two largest values start out in the wrong order, they will stay swapped after the whole sort finishes.
+
+In short: the inner‑loop bound is off by one.
+
+### Correct loop bounds
+
+* **Outer loop** – we need `n‑1` passes (or `range(n)` and break early when no swaps occur).  
+* **Inner loop** – on the `i`‑th pass we must compare up to index `n‑i‑2` **inclusive**, i.e. `range(n‑i‑1)`.
+
+```python
+def bubble_sort(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):                 # n‑1 passes
+        for j in range(n - i - 1):         # compare up to the unsorted boundary
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+### Why `n - i - 1` works
+
+- After `i` passes, the last `i` elements are already the largest `i` values in correct order.
+- The *unsorted* portion therefore ends at index `n‑i‑1`.
+- The last comparison we need on this pass is between indices `n‑i‑2` and `n‑i‑1`, so `j` must reach `n‑i‑2`.  
+  `range(n - i - 1)` generates exactly the values `0 … n‑i‑2`.
+
+### Optional optimisation (early exit)
+
+If you want the algorithm to stop as soon as the list becomes sorted, you can add a `swapped` flag:
+
+```python
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):
+        swapped = False
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        if not swapped:          # no swaps → list is already sorted
+            break
+    return arr
+```
+
+Now the function will correctly sort any list, including the case where the last two elements were previously left out of order.","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):                 # n‑1 passes
+        for j in range(n - i - 1):         # compare up to the unsorted boundary
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+I changed the inner loop to `range(n - i - 1)` so it compares the last pair on each pass.",,,
+9,Q3_debug_offbyone_linearsearch,socratic,"1. In the `for` loop of `linear_search_buggy`, what exact sequence of index values does `range(len(arr) - 1)` produce for a list of length 5?  
+
+2. Which index corresponds to the last element of the list, and does that index appear in the sequence you just identified?  
+
+3. If you wanted the loop to examine every element, how would the relationship between `len(arr)` and the range’s stop value need to change—think back to the off‑by‑one pattern you’ve seen before?","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to use `range(len(arr))` so it checks every element, including the last one.",,,
+26,Q3_debug_offbyone_linearsearch,socratic,"1. If `arr` has `N` elements, what exact sequence of indices does `range(len(arr) - 1)` produce?  
+
+2. Which index corresponds to the very last element of the list, and is that index included in the sequence from the previous question?  
+
+3. When the target resides at that last index, what does the loop do after checking the earlier indices, and what value is ultimately returned?  ","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to iterate over `range(len(arr))` so it includes the last index.",,,
+78,Q3_debug_offbyone_linearsearch,socratic,"1. In the `for` loop of `linear_search_buggy`, what exact sequence of index values does `range(len(arr) - 1)` produce for a list of length 5?  
+
+2. Which index corresponds to the last element of the list, and does that index appear in the sequence you just identified?  
+
+3. If you wanted the loop to examine every element, how would the range’s start, stop, or step need to relate to `len(arr)`—does this remind you of any off‑by‑one patterns you’ve seen before?","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to `range(len(arr))` so it checks every index, including the last element.",,,
 38,Q1_callstack_factorial,zero_shot,"Sure! Let’s walk through exactly what happens when you call  
 
 ```python
@@ -1374,194 +1238,210 @@ Hope that clears up how the multiplication happens as the calls return! Let me k
 - `factorial(3)` receives 2, computes `3 * 2 = 6`, and returns **6**.  
 - `factorial(4)` receives 6, computes `4 * 6 = 24`, and returns **24**.  
 - `factorial(5)` receives 24, computes `5 * 24 = 120`, and returns the final result **120**.",,,
-82,Q1_callstack_factorial,socratic,"1. When `factorial(5)` calls `factorial(4)`, what value does the call `factorial(4)` return before the multiplication in the `factorial(5)` frame can be performed?
+230,Q6_concept_stack_lifo,socratic,"1. When you call `push`, which internal list attribute is being modified, and where does the new element end up in that list?  
 
-2. After `factorial(4)` has returned, what is the current value of `n` in the `factorial(5)` frame, and how does that value combine with the returned result?
+2. When `pop` is executed, how does the method determine which element to remove from `_items`?  
 
-3. If you list the return values from the deepest call `factorial(1)` upward, how does each step’s multiplication build the final result? (Think about the pattern you saw when a stack overflow occurred previously.)","- `factorial(1)` returns **1**  
-- `factorial(2)` returns **2 × 1 = 2**  
-- `factorial(3)` returns **3 × 2 = 6**  
-- `factorial(4)` returns **4 × 6 = 24**  
-- `factorial(5)` returns **5 × 24 = 120**  
+3. If you performed a sequence of `push` calls followed by a single `pop`, which element would you expect to get back, and why does that follow from the way the list’s `append` and `pop` methods work?  
 
-So the final result of `factorial(5)` is **120**.",,,
-87,Q2_callstack_mergesort,cot_tracing,"<reasoning>
-**Initial call**
-- `merge_sort([5, 3, 8, 1])`
-  - `len = 4`, `mid = 2`
-  - Calls:
-    1. `left = merge_sort([5, 3])`
-    2. `right = merge_sort([8, 1])`
+4. How would the behavior change if `pop` removed the first element of `_items` instead of the last one?","After calling `push(1)`, `push(2)`, and `push(3)`, the internal list `_items` looks like `[1, 2, 3]`.  
+When `pop()` is called, it removes and returns the last element of that list (`_items.pop()`), which is `3`.  
 
-**First branch – left side**
-- `merge_sort([5, 3])`
-  - `len = 2`, `mid = 1`
-  - Calls:
-    a. `left = merge_sort([5])` → returns `[5]` (base case)
-    b. `right = merge_sort([3])` → returns `[3]` (base case)
-  - `_merge([5], [3])`:
-    - `i=0, j=0, result=[]`
-    - Compare `5` (left[i]) vs `3` (right[j]): `3` is smaller → `result=[3]`, `j=1`
-    - `j` reached `len(right)`, extend remaining left: `result=[3,5]`
-  - Returns `[3, 5]`
+So `pop()` returns **3** because each `push` appends to the end of the list, and `pop` removes from the end, giving the most recently added item first—exactly the LIFO (last‑in, first‑out) behavior of a stack.",,,
+45,Q6_concept_stack_lifo,socratic,"1. When you call `push`, what happens to the internal `_items` list—where does the new element end up relative to the elements already stored?
 
-**Second branch – right side**
-- `merge_sort([8, 1])`
-  - `len = 2`, `mid = 1`
-  - Calls:
-    a. `left = merge_sort([8])` → returns `[8]` (base case)
-    b. `right = merge_sort([1])` → returns `[1]` (base case)
-  - `_merge([8], [1])`:
-    - `i=0, j=0, result=[]`
-    - Compare `8` vs `1`: `1` is smaller → `result=[1]`, `j=1`
-    - `j` reached `len(right)`, extend remaining left: `result=[1,8]`
-  - Returns `[1, 8]`
+2. In `pop`, which element of `_items` is returned and removed? How does the index used (`-1`) relate to the order in which items were added?
 
-**Final merge**
-- `_merge(left=[3,5], right=[1,8])`:
-  - `i=0, j=0, result=[]`
-  - Step 1: compare `3` vs `1` → `1` smaller → `result=[1]`, `j=1`
-  - Step 2: compare `3` vs `8` → `3` smaller → `result=[1,3]`, `i=1`
-  - Step 3: compare `5` vs `8` → `5` smaller → `result=[1,3,5]`, `i=2`
-  - `i` reached `len(left)`, extend remaining right: `result=[1,3,5,8]`
-- Final return from the original call: `[1, 3, 5, 8]`
+3. If you push the values `A`, then `B`, then `C` in that sequence, which value will `pop` return first? What does that tell you about the ordering discipline the class is imposing?","After doing `push(1)`, `push(2)`, `push(3)`, the internal list `_items` looks like `[1, 2, 3]`.  
+When `pop()` is called, it removes and returns the element at index `-1`, which is the last element in the list.  
+So `pop()` will return `3`.  
+This happens because the last value pushed (`3`) is at the end of the list, and `pop()` always takes the element from that end, giving us a LIFO (last‑in, first‑out) behavior.",,,
+3,Q6_concept_stack_lifo,cot_tracing,"<reasoning>
+**Trace of a simple usage of the `Stack` class**
+
+Assume we execute the following sequence:
+
+```python
+s = Stack()          # create an empty stack
+s.push('A')          # push first element
+s.push('B')          # push second element
+s.push('C')          # push third element
+first_pop = s.pop()  # pop once
+second_pop = s.pop() # pop again
+```
+
+Step‑by‑step internal state:
+
+| Step | Operation | `_items` after operation | Returned value (if any) |
+|------|-----------|--------------------------|--------------------------|
+| 1    | `s = Stack()` | `[]` (empty list) | – |
+| 2    | `s.push('A')` | `['A']` (append adds to the right end) | – |
+| 3    | `s.push('B')` | `['A', 'B']` | – |
+| 4    | `s.push('C')` | `['A', 'B', 'C']` | – |
+| 5    | `first_pop = s.pop()` | `['A', 'B']` (list `pop()` removes the **last** element) | `'C'` |
+| 6    | `second_pop = s.pop()` | `['A']` | `'B'` |
+
+Key observations from the trace:
+
+1. `push` uses `list.append`, which always adds the new element to the **rightmost** position of the internal list.
+2. `pop` uses `list.pop()` without an index, which removes and returns the **rightmost** element—the one most recently appended.
+3. Because the element added last is the one removed first, the data structure follows **Last‑In‑First‑Out (LIFO)** ordering.
+
+If we continued with another `pop()`, the remaining `'A'` would be returned, confirming that elements are retrieved in reverse order of insertion.
 </reasoning>
-
 <hint>
-Look at the moment when the recursion has just returned two size‑1 lists and they are about to be merged. At that depth, what are the exact contents of the “left” and “right” arguments passed to `_merge`? Once you know those two lists, can you determine which element will be appended first to the result list? What will be the first element of the merged list? 
-</hint>","**Answer to the tutor’s question**
+Look at the order in which elements are added to the internal list with `push` and the position from which `pop` removes an element. After pushing three items, which item does the first `pop()` return? What will the second `pop()` return? Try to write down the list contents after each operation. What element will be returned on the next `pop()`? 
+</hint>","After `push(1)`, `push(2)`, `push(3)` the internal list looks like `[1, 2, 3]`.  
+The first `pop()` removes and returns the last element of the list, which is `3`.  
+The second `pop()` then removes the new last element, `2`.  
+So the stack returns the items in reverse order of insertion: 3, then 2, then 1.  
+This happens because `push` appends to the end of the list and `pop` removes from the end, enforcing LIFO (last‑in, first‑out).",,,
+225,Q2_callstack_mergesort,zero_shot,"Below is a **step‑by‑step walk‑through** of the `merge_sort` function as it runs on the list  
 
-When the recursion returns two size‑1 lists, the call to `_merge` receives:
+```python
+arr = [5, 3, 8, 1]
+```
 
-* `left = [5]`  
-* `right = [3]`
-
-The comparison `left[0] <= right[0]` is `False`, so the first element appended to `result` is `3`.  
-Thus the first element of the merged list at this depth is **3**.
-
-(For the other half of the array the analogous call receives `left = [8]`, `right = [1]` and the first element appended is **1**.)
+I’ll keep the **call‑stack** visible at every level, label each recursive call as **L** (the “left” half) or **R** (the “right” half), and show exactly what the `_merge` routine does when the recursion starts to unwind.
 
 ---
 
-**Trace of left/right sub‑lists at every recursion level**
-
-| Level | Function call | `arr` | `mid` | `left` sub‑list | `right` sub‑list | Result of `_merge` |
-|-------|---------------|-------|-------|-----------------|------------------|--------------------|
-| 0 | `merge_sort([5,3,8,1])` | `[5,3,8,1]` | 2 | `merge_sort([5,3])` | `merge_sort([8,1])` | – |
-| 1‑L | `merge_sort([5,3])` | `[5,3]` | 1 | `merge_sort([5])` | `merge_sort([3])` | – |
-| 2‑L | `merge_sort([5])` | `[5]` | – | – | – | returns `[5]` |
-| 2‑L | `merge_sort([3])` | `[3]` | – | – | – | returns `[3]` |
-| 1‑L | `_merge([5],[3])` | – | – | `[5]` | `[3]` | `[3,5]` |
-| 1‑R | `merge_sort([8,1])` | `[8,1]` | 1 | `merge_sort([8])` | `merge_sort([1])` | – |
-| 2‑R | `merge_sort([8])` | `[8]` | – | – | – | returns `[8]` |
-| 2‑R | `merge_sort([1])` | `[1]` | – | – | – | returns `[1]` |
-| 1‑R | `_merge([8],[1])` | – | – | `[8]` | `[1]` | `[1,8]` |
-| 0 | `_merge([3,5],[1,8])` | – | – | `[3,5]` | `[1,8]` | `[1,3,5,8]` |
-
-**Final merged list**
+## 1️⃣  The top‑level call  
 
 ```
-[1, 3, 5, 8]
+merge_sort([5, 3, 8, 1])
 ```
-",,,
-210,Q1_callstack_factorial,cot_tracing,"<reasoning>
-**Initial call**
-- `factorial(5)` is invoked.
-- Since `5 > 1`, execution proceeds to `return 5 * factorial(4)`.
 
-**First recursive layer**
-- `factorial(4)` is called.
-- `4 > 1`, so it will return `4 * factorial(3)`.
+* `mid = len(arr)//2 = 4//2 = 2`
+* **left**  = `merge_sort([5, 3])`   ← **L1**
+* **right** = `merge_sort([8, 1])`   ← **R1**
 
-**Second recursive layer**
-- `factorial(3)` is called.
-- `3 > 1`, so it will return `3 * factorial(2)`.
+The function does **not** sort anything yet – it just splits and recurses.
 
-**Third recursive layer**
-- `factorial(2)` is called.
-- `2 > 1`, so it will return `2 * factorial(1)`.
+---
 
-**Base case**
-- `factorial(1)` is called.
-- Condition `n <= 1` is true → returns `1`.
+## 2️⃣  First level of recursion  
 
-**Unwinding the stack**
-1. Return to `factorial(2)`:
-   - Received result from `factorial(1)` = `1`.
-   - Computes `2 * 1 = 2`.
-   - Returns `2` to its caller.
-2. Return to `factorial(3)`:
-   - Received result from `factorial(2)` = `2`.
-   - Computes `3 * 2 = 6`.
-   - Returns `6` to its caller.
-3. Return to `factorial(4)`:
-   - Received result from `factorial(3)` = `6`.
-   - Computes `4 * 6 = 24`.
-   - Returns `24` to its caller.
-4. Return to `factorial(5)`:
-   - Received result from `factorial(4)` = `24`.
-   - Computes `5 * 24 = 120`.
-   - Returns `120` as the final result.
+### L1 – `merge_sort([5, 3])`
 
-**Stack snapshot at each return point**
-- After `factorial(1)` returns: stack = `[factorial(2), factorial(3), factorial(4), factorial(5)]`
-- After `factorial(2)` returns: stack = `[factorial(3), factorial(4), factorial(5)]`
-- After `factorial(3)` returns: stack = `[factorial(4), factorial(5)]`
-- After `factorial(4)` returns: stack = `[factorial(5)]`
-- After `factorial(5)` returns: stack = `[]` (empty)
+* `mid = 2//2 = 1`
+* **left**  = `merge_sort([5])`   ← **L2**
+* **right** = `merge_sort([3])`   ← **R2**
 
-The multiplication occurs **exactly when each call receives the result of its deeper call** and then multiplies that result by its own `n` before returning.
-</reasoning>
-<hint>
-Look at the moment when `factorial(3)` gets the value back from `factorial(2)`. What two numbers are multiplied there, and what should that product be? Once you have that, you can see how the next level (`factorial(4)`) uses the result. What is the multiplication performed in `factorial(3)`? 
-</hint>","When the recursion unwinds:
+Both `[5]` and `[3]` have length 1, so each call returns immediately (base case).
 
-- `factorial(1)` hits the base case and returns **1**.  
-- `factorial(2)` receives that 1 and returns **2 × 1 = 2**.  
-- `factorial(3)` receives the 2 and returns **3 × 2 = 6**.  
-- `factorial(4)` receives the 6 and returns **4 × 6 = 24**.  
-- `factorial(5)` receives the 24 and returns **5 × 24 = 120**.
-
-So the final result of `factorial(5)` is **120**.",,,
-133,Q3_debug_offbyone_linearsearch,cot_tracing,"<reasoning>
-**Scenario:** `arr = [2, 4, 6, 8]`, `target = 8`
-
-1. **Function entry**
-   - `arr` length = `len(arr) = 4`
-   - Loop header: `for i in range(len(arr) - 1)`
-
-2. **Compute loop range**
-   - `len(arr) - 1 = 4 - 1 = 3`
-   - `range(3)` produces the sequence of indices: `0, 1, 2`
-
-3. **Iteration steps**
-   - **i = 0**
-     - `arr[0] = 2`
-     - `2 == 8` → `False`
-   - **i = 1**
-     - `arr[1] = 4`
-     - `4 == 8` → `False`
-   - **i = 2**
-     - `arr[2] = 6`
-     - `6 == 8` → `False`
-
-4. **Loop termination**
-   - The loop stops after `i = 2` because the range does not include `i = 3`.
-   - The last element (`arr[3] = 8`) is never examined.
-
-5. **Return**
-   - After the loop, the function reaches `return -1`, indicating the target was not found.
-
-**Result:** The function never checks the element at index `len(arr) - 1`, so a target located at the very end of the list is missed.
-</reasoning>
-<hint>
-Examine the `for` loop’s range expression: `range(len(arr) - 1)`. For a list of length N, which indices does this range actually generate? Does it ever produce the index N‑1? What change to the range would allow the loop to inspect the final element? 
-</hint>","```python
-def linear_search_buggy(arr, target):
-    """"""Linear search over a list. Returns the index of target or -1.""""""
-    for i in range(len(arr)):          # include all indices
-        if arr[i] == target:
-            return i
-    return -1
 ```
-I changed the loop to `range(len(arr))` so it checks the last element.",,,
+L2 returns [5]
+R2 returns [3]
+```
+
+Now `_merge([5], [3])` is executed (still inside **L1**).
+
+### R1 – `merge_sort([8, 1])`
+
+* `mid = 2//2 = 1`
+* **left**  = `merge_sort([8])`   ← **L3**
+* **right** = `merge_sort([1])`   ← **R3**
+
+Again, each sub‑list is length 1, so they return immediately.
+
+```
+L3 returns [8]
+R3 returns [1]
+```
+
+Now `_merge([8], [1])` is executed (still inside **R1**).
+
+---
+
+## 3️⃣  The `_merge` calls (the “unwinding” phase)
+
+### 3a️⃣  Merging inside **L1** – `_merge([5], [3])`
+
+```
+left = [5]   right = [3]
+i = j = 0
+```
+
+| step | comparison                | result list | i | j |
+|------|---------------------------|-------------|---|---|
+| 1    | 5 ≤ 3 ?  (False)          | [3]         | 0 | 1 |
+| 2    | right exhausted → extend left | [3, 5] | 1 | 1 |
+
+`_merge` returns **[3, 5]**.  
+So **L1** (the whole left half of the original array) is now **sorted** as `[3, 5]`.
+
+### 3b️⃣  Merging inside **R1** – `_merge([8], [1])`
+
+```
+left = [8]   right = [1]
+i = j = 0
+```
+
+| step | comparison                | result list | i | j |
+|------|---------------------------|-------------|---|---|
+| 1    | 8 ≤ 1 ?  (False)          | [1]         | 0 | 1 |
+| 2    | right exhausted → extend left | [1, 8] | 1 | 1 |
+
+`_merge` returns **[1, 8]**.  
+So **R1** (the whole right half of the original array) is now **sorted** as `[1, 8]`.
+
+---
+
+## 4️⃣  Final merge – back to the top level  
+
+We now have the two sorted halves:
+
+* **left**  = result of **L1** = `[3, 5]`
+* **right** = result of **R1** = `[1, 8]`
+
+We call `_merge([3, 5], [1, 8])`.
+
+```
+left = [3, 5]   right = [1, 8]
+i = j = 0
+```
+
+| step | comparison                     | result list | i | j |
+|------|--------------------------------|-------------|---|---|
+| 1    | 3 ≤ 1 ? (False)                | [1]         | 0 | 1 |
+| 2    | 3 ≤ 8 ? (True)                 | [1, 3]      | 1 | 1 |
+| 3    | 5 ≤ 8 ? (True)                 | [1, 3, 5]   | 2 | 1 |
+| 4    | left exhausted → extend right  | [1, 3, 5, 8] | 2 | 2 |
+
+`_merge` returns **[1, 3, 5, 8]** – the fully sorted list.
+
+---
+
+## 5️⃣  Recap of the call‑stack (with results)
+
+```
+merge_sort([5, 3, 8, 1])          →  [1, 3, 5, 8]
+│
+├─ L1: merge_sort([5, 3])        →  [3, 5]
+│   ├─ L2: merge_sort([5])       →  [5]
+│   └─ R2: merge_sort([3])       →  [3]
+│   └─ _merge([5], [3])          →  [3, 5]
+│
+└─ R1: merge_sort([8, 1])        →  [1, 8]
+    ├─ L3: merge_sort([8])       →  [8]
+    └─ R3: merge_sort([1])       →  [1]
+    └─ _merge([8], [1])          →  [1, 8]
+    
+└─ _merge([3, 5], [1, 8])        →  [1, 3, 5, 8]
+```
+
+---
+
+### Quick mental tip for deeper recursions
+
+1. **Always write the sub‑list you are calling on** next to the function name.  
+   Example: `merge_sort([5, 3])` → “I’m sorting the left half of the original list.”
+2. **Label the two recursive calls** as **L** (first half) and **R** (second half).  
+   The *order* never changes: first you compute `left = merge_sort(arr[:mid])`, then `right = merge_sort(arr[mid:])`.
+3. **When a call returns**, immediately note the returned list; that’s the *sorted* version of that sub‑list.  
+   Then you can move on to the next sibling call or to the merge step.
+4. **Draw a tiny tree** (as above) – each node is a call, each leaf is a base‑case list of length 0 or 1.  
+   The merge steps happen **bottom‑up**, exactly in the order you see the arrows pointing upward.
+
+With this systematic approach you can trace `merge_sort` on any size list, no matter how many recursion levels are involved. Happy debugging!","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199665, Requested 2542. Please try again in 15m53.424s. Need more tokens? U",,,
