@@ -1,0 +1,13 @@
+query_id,chunking_strategy,retriever_mode,retrieved,context_chars,target_coverage,target_intact
+Q1_callstack_factorial,ast_semantic,bm25+dense+crossencoder,"[""FunctionDef:factorial:L1-5"", ""FunctionDef:fibonacci:L8-12""]",325,1.0,1
+Q2_callstack_mergesort,ast_semantic,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1
+Q3_debug_offbyone_linearsearch,ast_semantic,bm25+dense+crossencoder,"[""FunctionDef:linear_search_buggy:L55-60"", ""FunctionDef:binary_search:L41-52""]",605,1.0,1
+Q4_debug_loopinvariant_bubblesort,ast_semantic,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1
+Q5_concept_search_complexity,ast_semantic,bm25+dense+crossencoder,"[""FunctionDef:binary_search:L41-52"", ""FunctionDef:linear_search_buggy:L55-60""]",605,1.0,1
+Q6_concept_stack_lifo,ast_semantic,bm25+dense+crossencoder,"[""ClassDef:Stack:L73-91"", ""FunctionDef:merge_sort:L15-22""]",748,1.0,1
+Q1_callstack_factorial,fixed_size,bm25+dense+crossencoder,"[""fixed:0:C0-500"", ""fixed:4:C1800-2244""]",982,1.0,1
+Q2_callstack_mergesort,fixed_size,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0
+Q3_debug_offbyone_linearsearch,fixed_size,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:3:C1350-1850""]",1038,1.0,0
+Q4_debug_loopinvariant_bubblesort,fixed_size,bm25+dense+crossencoder,"[""fixed:3:C1350-1850"", ""fixed:1:C450-950""]",1038,1.0,1
+Q5_concept_search_complexity,fixed_size,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1
+Q6_concept_stack_lifo,fixed_size,bm25+dense+crossencoder,"[""fixed:4:C1800-2244"", ""fixed:3:C1350-1850""]",982,1.0,0
