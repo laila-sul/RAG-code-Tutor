@@ -1027,7 +1027,15 @@ def done_keys(path):
     if os.path.exists(path):
         with open(path, encoding="utf-8", newline="") as f:
             for r in csv.DictReader(f):
-                if r.get("status") in ("OK", "MOCK"):
+                if r.get("status") not in ("OK", "MOCK"):
+                    continue
+                # A row is finished only if its judge and student steps also succeeded;
+                # otherwise --resume re-runs it (rows without P are ignored by the analysis).
+                if r.get("provider") == "control":
+                    complete = (r.get("student_success") or "") != ""
+                else:
+                    complete = (r.get("P") or "") != ""
+                if complete:
                     keys.add((r["query_id"], r["chunking_strategy"], r["prompt_strategy"],
                               r["provider"], r["repeat"]))
     return keys
