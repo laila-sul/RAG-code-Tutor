@@ -101,6 +101,13 @@ def main():
         dis = x[x.a != x.b]
         if len(dis):
             print(f"  {len(dis)} disagreements; resolve these by discussion: run_id = {list(dis.index)}")
+        if mcol in res:  # automatic score against each annotator on its own (no rows dropped)
+            for who, col in (("annotator A", "a"), ("annotator B", "b")):
+                mm = res.loc[res.index.intersection(x.index), mcol].dropna().astype(int)
+                hh = x.loc[mm.index, col].astype(int)
+                kk, pp = kappa(hh, mm)
+                print(f"Automatic score ({mcol}) vs {who}: n={len(hh)}  agreement={pp:.1%}  kappa={kk:.2f}  "
+                      f"(human marked 0 on {(hh == 0).sum()} rows, automatic on {(mm == 0).sum()})")
         cons = x[x.a == x.b].a.astype(int)
         if mcol in res:
             m = res.loc[res.index.intersection(cons.index), mcol].dropna().astype(int)
@@ -121,6 +128,8 @@ def main():
     if rows:
         pd.DataFrame(rows).to_csv("table_validation.csv", index=False)
         print("\nSaved: table_validation.csv")
+    print("\nNote: when one label is very rare (for example 'inaccurate'), kappa is unstable even with high "
+          "agreement; report the percent agreement and the counts as well.")
     print("\nReport kappa with n and say that the sample is small; with fewer than about 30 items "
           "the intervals are wide.")
 
