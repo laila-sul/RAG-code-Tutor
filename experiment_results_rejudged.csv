@@ -11724,7 +11724,7 @@ The recursion tree and the step‑by‑step merges shown above should keep the �
 4. If you had a very small list versus a very large list, how would the differences you identified in the previous questions influence which search method you’d prefer?","Binary search runs in \(O(\log n)\) time because each loop halves the remaining search space, but it only works on a sorted list. Linear search runs in \(O(n)\) time, examining every element until it finds the target, and works on any list. I would use binary search for large, sorted data sets where the cost of sorting is justified, and linear search for small or unsorted lists where the overhead of sorting would outweigh the speed gain.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The response only asks guiding questions and makes no factual or code claims inconsistent with the notes or code.""}"
-225,2026-11-24T22:38:44.601346+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,zero_shot,cerebras,gpt-oss-120b,2,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,422,1648,57,2070,1.1012,0,OK,0,1,1,0,OK,API_ERROR,1,1,,0.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Below is a **step‑by‑step walk‑through** of the `merge_sort` function as it runs on the list  
+225,2026-11-24T22:38:44.601346+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,zero_shot,cerebras,gpt-oss-120b,2,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,422,1648,57,2070,1.1012,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Below is a **step‑by‑step walk‑through** of the `merge_sort` function as it runs on the list  
 
 ```python
 arr = [5, 3, 8, 1]
@@ -11872,7 +11872,22 @@ merge_sort([5, 3, 8, 1])          →  [1, 3, 5, 8]
 4. **Draw a tiny tree** (as above) – each node is a call, each leaf is a base‑case list of length 0 or 1.  
    The merge steps happen **bottom‑up**, exactly in the order you see the arrows pointing upward.
 
-With this systematic approach you can trace `merge_sort` on any size list, no matter how many recursion levels are involved. Happy debugging!","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198406, Requested 2375. Please try again in 5m37.392s. Need more tokens? Up","
+With this systematic approach you can trace `merge_sort` on any size list, no matter how many recursion levels are involved. Happy debugging!","**Sub‑lists at each recursion level**
+
+| Level | Call | Left sub‑list | Right sub‑list |
+|-------|------|---------------|----------------|
+| 0 (top) | `merge_sort([5, 3, 8, 1])` | `[5, 3]` | `[8, 1]` |
+| 1 (L1) | `merge_sort([5, 3])` | `[5]` | `[3]` |
+| 1 (R1) | `merge_sort([8, 1])` | `[8]` | `[1]` |
+| 2 | Base cases | `[5]`, `[3]`, `[8]`, `[1]` | – |
+
+**Merge steps**
+
+1. `_merge([5], [3])` → `[3, 5]`  (result of L1)  
+2. `_merge([8], [1])` → `[1, 8]`  (result of R1)  
+3. `_merge([3, 5], [1, 8])` → `[1, 3, 5, 8]`  (final sorted list)
+
+**Final merged list:** `[1, 3, 5, 8]`","
 
 {""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor's trace of merge_sort([5, 3, 8, 1]) and all _merge steps exactly match the provided code and teacher notes.""}"
 226,2026-11-24T20:51:19.380456+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,zero_shot,cerebras,gpt-oss-120b,1,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,394,1235,209,1629,1.2277,0,OK,0,1,1,0,OK,OK,0,1,1,0.0,0.0,1.0,0.3333,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"**Time‑complexity recap**
@@ -11961,7 +11976,17 @@ Choose binary search when the data is already sorted (or can be kept sorted) and
 So the final sorted list produced by `merge_sort([5, 3, 8, 1])` is `[1, 3, 5, 8]`.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The response only asks guiding questions and does not state the full trace or final sorted result.""}"
-228,2026-11-24T22:45:22.999263+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,,,none,no_tutor_control,control,openai/gpt-oss-20b,2,,,,,,,,,,,,API_ERROR,0,,,,,API_ERROR,,,,,,,,,openai/gpt-oss-20b,,,,
+228,2026-11-24T22:45:22.999263+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,,,none,no_tutor_control,control,openai/gpt-oss-20b,2,,,,,,,,,,,,API_ERROR,0,,,,,OK,,,1,,,1.0,,,openai/gpt-oss-20b,,,"```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):   # fixed upper bound
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+I changed the inner loop’s upper bound to `n - i - 1` so every adjacent pair is compared.",
 229,2026-11-24T22:45:23.800073+00:00,Q1_callstack_factorial,call_stack_tracing,,,none,no_tutor_control,control,openai/gpt-oss-20b,1,,,,,,,,,,,,OK,0,,,,,OK,,,1,,,1.0,,,openai/gpt-oss-20b,,,"When the recursion unwinds, each call multiplies its `n` by the result that came back from the deeper call:
 
 1. `factorial(1)` returns **1** (base case).  
@@ -12030,7 +12055,7 @@ If the array length is 1024, roughly how many comparisons would binary search ne
 </hint>","Linear search runs in O(n) time – it may compare every element in the worst case. Binary search runs in O(log n) time – it halves the search space each step, so for 1024 items it needs at most about 10 comparisons. Use linear search when the list is unsorted or very small; use binary search when the list is sorted and you need faster look‑ups.","
 
 {""accurate"": false, ""gave_full_answer"": false, ""reason"": ""The hidden reasoning incorrectly claims the given binary search inspects at most ceil(log2 n) elements and treats the buggy linear search as a correct full scan.""}"
-233,2026-11-24T22:45:25.565204+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,2,bm25+dense+crossencoder,"[""FunctionDef:linear_search_buggy:L55-60"", ""FunctionDef:binary_search:L41-52""]",605,1.0,1,289,729,73,1018,1.7522,0,OK,0,1,1,1,OK,API_ERROR,0,1,,0.0,0.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"**What’s happening?**  
+233,2026-11-24T22:45:25.565204+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,2,bm25+dense+crossencoder,"[""FunctionDef:linear_search_buggy:L55-60"", ""FunctionDef:binary_search:L41-52""]",605,1.0,1,289,729,73,1018,1.7522,0,OK,0,1,1,1,OK,OK,0,1,1,0.0,0.0,1.0,0.3333,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"**What’s happening?**  
 
 ```python
 def linear_search_buggy(arr, target):
@@ -12111,7 +12136,15 @@ All three versions will correctly locate the target even when it is the last ele
 
 ### Take‑away
 
-The bug is an **off‑by‑one error** caused by using `range(len(arr) - 1)`. In Python (and most languages), loops that need to visit every element should iterate up to `len(arr)`, not `len(arr) - 1`. Using `enumerate` or built‑in list methods can help avoid this class of mistake.","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199315, Requested 1184. Please try again in 3m35.567999999s. Need more toke","
+The bug is an **off‑by‑one error** caused by using `range(len(arr) - 1)`. In Python (and most languages), loops that need to visit every element should iterate up to `len(arr)`, not `len(arr) - 1`. Using `enumerate` or built‑in list methods can help avoid this class of mistake.","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to iterate over the full range (`range(len(arr))`) instead of `len(arr) - 1`.","
 
 {""accurate"": false, ""gave_full_answer"": true, ""reason"": ""The sanity check incorrectly claims the buggy version returns 0 for the last element, when it actually returns -1.""}"
 234,2026-11-24T22:15:23.092837+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,cot_tracing,groq,openai/gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,629,1148,575,1777,2.8965,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
@@ -13116,7 +13149,7 @@ def find(arr, target, *, sorted=False):
 Pick binary search when you have a sizable, static (or rarely‑changed) sorted list and you’ll be doing many look‑ups. Pick linear search when the data is unsorted, tiny, or changing often, or when the cost of sorting outweighs the benefit of faster queries.","Linear search runs in \(O(n)\) time (worst‑case) and is best when the list is unsorted, tiny, or changes often, because it needs no pre‑processing. Binary search runs in \(O(\log n)\) time but requires a sorted, random‑access list, so it’s preferable for large, static or infrequently updated collections where many look‑ups justify the one‑time sort cost.","[judge attempt 2] 
 
 {""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly explains O(log n) vs O(n), the sorted-list requirement, and practical trade-offs, and it provides a complete final answer.""}"
-223,2026-11-24T22:34:20.082680+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,1,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,320,1706,51,2026,3.7965,0,OK,0,1,1,0,OK,API_ERROR,1,1,,0.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Below is a **step‑by‑step trace** of what the two functions `merge_sort` and `_merge` do when you call  
+223,2026-11-24T22:34:20.082680+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,1,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,320,1706,51,2026,3.7965,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Below is a **step‑by‑step trace** of what the two functions `merge_sort` and `_merge` do when you call  
 
 ```python
 merge_sort([5, 3, 8, 1])
@@ -13276,7 +13309,21 @@ Following the tree diagram above, you can always tell which sub‑list is the cu
 merge_sort([5, 3, 8, 1])   # → [1, 3, 5, 8]
 ```
 
-The recursion tree and the step‑by‑step merges shown above should keep the “left vs. right” relationship clear, even when the depth goes beyond two levels. Happy tracing!","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198718, Requested 2520. Please try again in 8m54.816s. Need more tokens? Up","[judge attempt 3] 
+The recursion tree and the step‑by‑step merges shown above should keep the “left vs. right” relationship clear, even when the depth goes beyond two levels. Happy tracing!","**Recursion levels**
+
+| Level | Left sub‑list | Right sub‑list |
+|-------|---------------|----------------|
+| 0 (top) | `[5, 3]` | `[8, 1]` |
+| 1 (left branch) | `[5]` | `[3]` |
+| 1 (right branch) | `[8]` | `[1]` |
+
+**Merges**
+
+1. `_merge([5], [3])` → `[3, 5]`  (left half of the top level)  
+2. `_merge([8], [1])` → `[1, 8]`  (right half of the top level)  
+3. `_merge([3, 5], [1, 8])` → `[1, 3, 5, 8]`  (final result)
+
+So the final merged list is **`[1, 3, 5, 8]`**.","[judge attempt 3] 
 
 {""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The visible trace and merge results match the provided merge_sort/_merge code and teacher notes, and it explicitly gives the final sorted list.""}"
 1,2026-11-25T00:39:19.425962+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,cot_tracing,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,596,511,810,1917,8.0274,0,OK,0,0,1,0,OK,OK,0,1,1,0.0,0.0,1.0,0.3333,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
@@ -14117,13 +14164,24 @@ def bubble_sort_buggy(arr):
 I changed the inner loop bound from `range(n - i - 2)` to `range(n - i - 1)` so the last pair of elements is compared on each pass.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor's visible and hidden claims about the loop bounds and trace are correct, but the student-visible text only asks a guiding question and does not state the corrected bound or full fix.""}"
-18,2026-11-25T01:13:53.269224+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,socratic,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,433,154,939,1526,20.8934,0,OK,0,1,0,0,OK,API_ERROR,1,0,,1.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"To help trace where the loop stops short, let's look at a concrete example:
+18,2026-11-25T01:13:53.269224+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,socratic,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,433,154,939,1526,20.8934,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"To help trace where the loop stops short, let's look at a concrete example:
 
 1. Suppose `arr` has a length of `n = 4`. On the very first pass of the outer loop (`i = 0`), what exact sequence of numbers does `range(n - i - 2)` produce for `j`?
 
 2. For the largest value of `j` in that range, which two indices are compared and potentially swapped using `arr[j]` and `arr[j + 1]`?
 
-3. After that first complete pass (`i = 0`), what guarantee (or loop invariant) should hold about the largest element in the array, and did the inner loop reach far enough to ensure that?","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199381, Requested 773. Please try again in 1m6.527999999s. Need more tokens","
+3. After that first complete pass (`i = 0`), what guarantee (or loop invariant) should hold about the largest element in the array, and did the inner loop reach far enough to ensure that?","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):          # fixed inner loop bound
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+
+I changed the inner loop to `range(n - i - 1)` so it compares all adjacent pairs up to the unsorted portion.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor only asks guiding questions and makes no incorrect factual or code claims, and does not provide the complete corrected loop bound or final answer.""}"
 19,2026-11-25T01:16:25.251210+00:00,Q1_callstack_factorial,call_stack_tracing,tracing,1,ast_semantic,socratic,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:factorial:L1-5"", ""FunctionDef:fibonacci:L8-12""]",325,1.0,1,342,147,836,1325,7.748,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"1. When the recursive calls finally reach `n = 1`, line 4 executes. What exact value is returned back to the frame that called it (`factorial(2)`)?
@@ -14157,14 +14215,22 @@ I changed the inner loop bound from `range(n - i - 2)` to `range(n - i - 1)` so 
    - Final result: **120**.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor's visible text makes only accurate claims about the factorial call stack and asks guiding questions without providing the full traced result.""}"
-20,2026-11-25T01:16:45.627374+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,ast_semantic,socratic,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:linear_search_buggy:L55-60"", ""FunctionDef:binary_search:L41-52""]",605,1.0,1,417,115,721,1253,5.4387,0,OK,0,1,0,0,OK,API_ERROR,1,0,,1.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"1. If you have a list `arr = [10, 20, 30]` with length 3, what exact sequence of numbers does `range(len(arr) - 1)` generate for the loop index `i`?
+20,2026-11-25T01:16:45.627374+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,ast_semantic,socratic,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:linear_search_buggy:L55-60"", ""FunctionDef:binary_search:L41-52""]",605,1.0,1,417,115,721,1253,5.4387,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"1. If you have a list `arr = [10, 20, 30]` with length 3, what exact sequence of numbers does `range(len(arr) - 1)` generate for the loop index `i`?
 
 2. What is the index of the last element (`30`) in that same list?
 
-3. Looking at the values `i` takes during the loop, does `i` ever reach the index of that final element? How does Python's `range()` function handle its upper boundary?","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199792, Requested 933. Please try again in 5m13.2s. Need more tokens? Upgra","
+3. Looking at the values `i` takes during the loop, does `i` ever reach the index of that final element? How does Python's `range()` function handle its upper boundary?","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):          # iterate over all indices, including the last
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to `range(len(arr))` so it includes the last element.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor only asks guiding questions and makes no incorrect factual or code claims, but does not provide the complete fix.""}"
-21,2026-11-25T01:19:22.702770+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,zero_shot,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,300,1193,1251,2744,12.693,0,OK,0,1,1,0,OK,API_ERROR,1,1,,0.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Tracing recursive algorithms like `merge_sort` is much easier when you remember that Python uses a **Call Stack**. Python will evaluate the left call (`left = merge_sort(...)`) completely down to its base case before it even *starts* evaluating the right call (`right = merge_sort(...)`).
+21,2026-11-25T01:19:22.702770+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,zero_shot,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,300,1193,1251,2744,12.693,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Tracing recursive algorithms like `merge_sort` is much easier when you remember that Python uses a **Call Stack**. Python will evaluate the left call (`left = merge_sort(...)`) completely down to its base case before it even *starts* evaluating the right call (`right = merge_sort(...)`).
 
 Here is the step-by-step trace of `merge_sort([5, 3, 8, 1])`, showing how the call stack tracks `left` and `right`.
 
@@ -14259,7 +14325,21 @@ You can picture the execution like an inverted tree where results travel upward:
 ```
 
 ### Pro Tip for Hand-Tracing Recursive Functions
-Always work **depth-first** down the left side completely until a value is returned, before moving over to the right side of that same branch level.","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199428, Requested 2108. Please try again in 11m3.552s. Need more tokens? Up","
+Always work **depth-first** down the left side completely until a value is returned, before moving over to the right side of that same branch level.","**Recursion levels**
+
+| Level | Current list | `left` sub‑list | `right` sub‑list |
+|-------|--------------|-----------------|------------------|
+| 0 | `[5, 3, 8, 1]` | `[5, 3]` | `[8, 1]` |
+| 1 (left branch) | `[5, 3]` | `[5]` | `[3]` |
+| 1 (right branch) | `[8, 1]` | `[8]` | `[1]` |
+
+**Merges**
+
+1. `_merge([5], [3])` → `[3, 5]`
+2. `_merge([8], [1])` → `[1, 8]`
+3. `_merge([3, 5], [1, 8])` → `[1, 3, 5, 8]`
+
+**Final sorted list:** `[1, 3, 5, 8]`","
 
 {""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor's trace of merge_sort([5, 3, 8, 1]) and all merge results exactly match the provided code and teacher notes.""}"
 22,2026-11-25T01:21:53.639427+00:00,Q1_callstack_factorial,call_stack_tracing,tracing,1,fixed_size,socratic,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""fixed:0:C0-500"", ""fixed:4:C1800-2244""]",982,1.0,1,536,160,830,1526,6.2257,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"1. When the recursive calls reach the base case at `n = 1`, what exact numerical value does `factorial(1)` return?
@@ -14279,7 +14359,7 @@ Always work **depth-first** down the left side completely until a value is retur
 So the final result of `factorial(5)` is **120**.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The visible response only asks guiding questions and makes no incorrect claims, but it does not provide the complete trace or final result.""}"
-23,2026-11-25T01:22:19.341284+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,fixed_size,cot_tracing,gemini,gemini-3.6-flash,1,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:3:C1350-1850""]",1038,1.0,0,608,361,687,1656,6.1579,0,OK,0,0,0,0,OK,API_ERROR,1,0,,1.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+23,2026-11-25T01:22:19.341284+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,fixed_size,cot_tracing,gemini,gemini-3.6-flash,1,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:3:C1350-1850""]",1038,1.0,0,608,361,687,1656,6.1579,0,OK,0,0,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
 Trace of `linear_search_buggy`:
 
 Setup:
@@ -14311,10 +14391,18 @@ Take a close look at the loop header: `for i in range(len(arr) - 1):`.
 
 Remember how Python's `range(stop)` function works: it includes starting numbers up to, but **not** including, the `stop` value itself.
 
-If you have a list `arr` with 5 elements (`len(arr)` is `5`), what exact sequence of numbers will `range(len(arr) - 1)` generate for `i`?","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199791, Requested 736. Please try again in 3m47.664s. Need more tokens? Upg","
+If you have a list `arr` with 5 elements (`len(arr)` is `5`), what exact sequence of numbers will `range(len(arr) - 1)` generate for `i`?","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):          # iterate over every index
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to `range(len(arr))` so it checks the last element as well.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor's claims about the loop range and hidden trace are correct, but the visible text only hints and asks a question without giving the exact fix or corrected code.""}"
-24,2026-11-25T01:24:48.190066+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,fixed_size,zero_shot,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:3:C1350-1850""]",1038,1.0,0,388,358,475,1221,4.3876,0,OK,0,1,1,1,OK,API_ERROR,1,1,,0.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"This happens because of how Python's `range()` function works in your loop condition:
+24,2026-11-25T01:24:48.190066+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,fixed_size,zero_shot,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:3:C1350-1850""]",1038,1.0,0,388,358,475,1221,4.3876,0,OK,0,1,1,1,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"This happens because of how Python's `range()` function works in your loop condition:
 
 ```python
 for i in range(len(arr) - 1):
@@ -14351,7 +14439,15 @@ def linear_search_fixed(arr, target):
         if item == target:
             return i
     return -1
-```","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199447, Requested 891. Please try again in 2m26.016s. Need more tokens? Upg","
+```","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):          # iterate over all indices
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to `range(len(arr))` so it checks the last element.","
 
 {""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor correctly identifies the off-by-one range bug and provides the exact corrected code.""}"
 25,2026-11-25T01:27:21.425249+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,socratic,gemini,gemini-3.6-flash,1,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,433,154,922,1509,9.0486,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"To help locate the issue in your loop bounds, try tracing a concrete example step-by-step:
@@ -14374,7 +14470,7 @@ def bubble_sort_buggy(arr):
 I changed the inner loop bound to `n - i - 1` so the last pair of elements is compared on each pass.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The response only asks guiding diagnostic questions and does not state the corrected loop bound, but it makes no inaccurate factual or code claims.""}"
-26,2026-11-25T01:28:16.406607+00:00,Q1_callstack_factorial,call_stack_tracing,tracing,1,ast_semantic,cot_tracing,gemini,gemini-3.6-flash,1,bm25+dense+crossencoder,"[""FunctionDef:factorial:L1-5"", ""FunctionDef:fibonacci:L8-12""]",325,1.0,1,390,561,745,1696,15.2189,0,OK,0,0,0,0,OK,API_ERROR,1,0,,1.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+26,2026-11-25T01:28:16.406607+00:00,Q1_callstack_factorial,call_stack_tracing,tracing,1,ast_semantic,cot_tracing,gemini,gemini-3.6-flash,1,bm25+dense+crossencoder,"[""FunctionDef:factorial:L1-5"", ""FunctionDef:fibonacci:L8-12""]",325,1.0,1,390,561,745,1696,15.2189,0,OK,0,0,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
 Trace of `factorial(5)` call stack and return values:
 
 1. Calls going down (Stack building):
@@ -14403,6 +14499,14 @@ Here is how the return phase starts:
 
 Now, **`factorial(3)`** receives that return value of **`2`**.
 
-When `factorial(3)` resumes, what multiplication does it perform with its own `n` value (`3`), and what is the result it returns up to `factorial(4)`?","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199768, Requested 898. Please try again in 4m47.712s. Need more tokens? Upg","
+When `factorial(3)` resumes, what multiplication does it perform with its own `n` value (`3`), and what is the result it returns up to `factorial(4)`?","On the way back up the calls return these values:
+
+- `factorial(1)` returns **1**  
+- `factorial(2)` receives 1 → `2 * 1 = 2` → returns **2**  
+- `factorial(3)` receives 2 → `3 * 2 = 6` → returns **6**  
+- `factorial(4)` receives 6 → `4 * 6 = 24` → returns **24**  
+- `factorial(5)` receives 24 → `5 * 24 = 120` → returns **120**
+
+So the final result of `factorial(5)` is **120**.","
 
 {""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The visible hint correctly traces the first return steps and asks the student to continue, without giving the full final result.""}"
