@@ -1,0 +1,3 @@
+score,n_pairs,kappa_human_human,agreement_human_human,n_consensus,kappa_auto_vs_human,agreement_auto_vs_human
+scaffolding,30,1.0,1.0,30,0.911,0.967
+accuracy,30,-0.056,0.833,25,1.0,1.0
