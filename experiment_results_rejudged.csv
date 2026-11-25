@@ -11391,7 +11391,7 @@ def find(arr, target, *, sorted=False):
 - **Linear search** = `O(n)` but works on any collection and has tiny constant overhead.  
 
 Pick binary search when you have a sizable, static (or rarely‑changed) sorted list and you’ll be doing many look‑ups. Pick linear search when the data is unsorted, tiny, or changing often, or when the cost of sorting outweighs the benefit of faster queries.","Linear search runs in \(O(n)\) time (worst‑case) and is best when the list is unsorted, tiny, or changes often, because it needs no pre‑processing. Binary search runs in \(O(\log n)\) time but requires a sorted, random‑access list, so it’s preferable for large, static or infrequently updated collections where many look‑ups justify the one‑time sort cost.",
-222,2026-11-24T22:29:52.937937+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,zero_shot,cerebras,gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,422,1648,57,2070,1.0413,0,OK,0,1,1,0,OK,API_ERROR,1,1,,0.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Below is a **step‑by‑step walk‑through** of the `merge_sort` function as it runs on the list  
+222,2026-11-24T22:29:52.937937+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,zero_shot,cerebras,gpt-oss-120b,0,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,422,1648,57,2070,1.0413,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Below is a **step‑by‑step walk‑through** of the `merge_sort` function as it runs on the list  
 
 ```python
 arr = [5, 3, 8, 1]
@@ -11539,7 +11539,19 @@ merge_sort([5, 3, 8, 1])          →  [1, 3, 5, 8]
 4. **Draw a tiny tree** (as above) – each node is a call, each leaf is a base‑case list of length 0 or 1.  
    The merge steps happen **bottom‑up**, exactly in the order you see the arrows pointing upward.
 
-With this systematic approach you can trace `merge_sort` on any size list, no matter how many recursion levels are involved. Happy debugging!","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199336, Requested 2331. Please try again in 12m0.144s. Need more tokens? Up","
+With this systematic approach you can trace `merge_sort` on any size list, no matter how many recursion levels are involved. Happy debugging!","**Recursion tree**
+
+| Level | Call | Left sub‑list | Right sub‑list |
+|-------|------|---------------|----------------|
+| 0 | `merge_sort([5, 3, 8, 1])` | `[5, 3]` | `[8, 1]` |
+| 1‑L | `merge_sort([5, 3])` | `[5]` | `[3]` |
+| 1‑R | `merge_sort([8, 1])` | `[8]` | `[1]` |
+
+**Merge results**
+
+* `_merge([5], [3])` → `[3, 5]`  (sorted left half)  
+* `_merge([8], [1])` → `[1, 8]`  (sorted right half)  
+* `_merge([3, 5], [1, 8])` → **`[1, 3, 5, 8]`**  (final sorted list)","
 
 {""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor's trace of merge_sort([5, 3, 8, 1]) and all _merge steps exactly match the provided code and teacher notes.""}"
 223,2026-11-24T22:34:20.082680+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,zero_shot,groq,openai/gpt-oss-120b,1,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,320,1706,51,2026,3.7965,0,OK,0,1,1,0,PARSE_ERROR,API_ERROR,,,,0.0,,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Below is a **step‑by‑step trace** of what the two functions `merge_sort` and `_merge` do when you call  
