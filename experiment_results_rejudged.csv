@@ -13267,3 +13267,757 @@ merge_sort([5, 3, 8, 1])   # → [1, 3, 5, 8]
 The recursion tree and the step‑by‑step merges shown above should keep the “left vs. right” relationship clear, even when the depth goes beyond two levels. Happy tracing!","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198718, Requested 2520. Please try again in 8m54.816s. Need more tokens? Up","[judge attempt 3] 
 
 {""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The visible trace and merge results match the provided merge_sort/_merge code and teacher notes, and it explicitly gives the final sorted list.""}"
+1,2026-11-25T00:39:19.425962+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,cot_tracing,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,596,511,810,1917,8.0274,0,OK,0,0,1,0,OK,OK,0,1,1,0.0,0.0,1.0,0.3333,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+Step-by-step state trace comparing Linear Search vs. Binary Search:
+
+1. Linear Search (Sequential scan):
+   - Input: Array `arr` of size N (sorted or unsorted).
+   - Iteration: Checks index 0, 1, 2, ..., N-1 until target is found or end reached.
+   - Worst case operations for N = 16: 16 comparisons -> O(N).
+
+2. Binary Search (Halving space):
+   - Input: Array `arr` of size N (MUST be sorted).
+   - Initial state: `low = 0`, `high = N - 1`.
+   - Iteration 1 (N = 16): `mid = 7`. Eliminates 8 elements. Remaining search space size = 8.
+   - Iteration 2: Eliminates 4 elements. Remaining search space size = 4.
+   - Iteration 3: Eliminates 2 elements. Remaining search space size = 2.
+   - Iteration 4: Eliminates 1 element. Remaining search space size = 1.
+   - Worst case operations for N = 16: 4 comparisons -> O(log N).
+
+Trade-off Analysis:
+- Binary Search is vastly faster for large N, but requires the array to be sorted first.
+- Sorting takes O(N log N). If searching only once on an unsorted array, linear search O(N) is faster than sorting + binary search. If searching many times, sorting once + binary search is better.
+
+<hint>
+Look at how `binary_search` updates its pointers in the code:
+`low = mid + 1` or `high = mid - 1`
+
+Because it checks the middle element `mid = (low + high) // 2`, it discards half of the remaining list in every single iteration. 
+
+Linear search, by contrast, checks elements one by one, so doubling the list size doubles the maximum number of checks required.
+
+To see the difference in practice, imagine you have a sorted array with **16** elements. If the target is at the very end (or not in the list at all), linear search takes 16 checks. 
+
+For `binary_search`, after the very first check at `mid`, how many elements are left in the search space?","Linear search runs in O(N) time, checking each element until it finds the target or reaches the end. Binary search runs in O(log N) time, halving the search space each step, but it requires the list to be sorted, so you use it when you have a sorted array and will perform many searches, otherwise linear search is simpler and faster for a single lookup on an unsorted list.","
+
+{""accurate"": false, ""gave_full_answer"": true, ""reason"": ""The response gives the correct high-level trade-off but incorrectly states that binary_search takes 4 comparisons in the worst case for N=16; the given implementation can take 5.""}"
+2,2026-11-25T00:39:38.983648+00:00,Q6_concept_stack_lifo,curriculum_alignment,concept,1,ast_semantic,zero_shot,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""ClassDef:Stack:L73-91"", ""FunctionDef:merge_sort:L15-22""]",748,1.0,1,270,578,484,1332,4.2502,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"In computer science, **LIFO (Last-In, First-Out)** means that the item added most recently to a collection will be the very first one to be removed—much like a stack of physical plates where you put new plates on top and take plates off from the top.
+
+Here is how the `Stack` class enforces this behavior conceptually through its `push` and `pop` methods:
+
+---
+
+### 1. The Underlying Storage: `self._items`
+The class initializes an empty Python list (`self._items`). In this implementation, **the end of the list represents the ""top"" of the stack**.
+
+---
+
+### 2. Adding Items with `push(item)`
+```python
+def push(self, item):
+    self._items.append(item)
+```
+* **Concept:** Every time you call `push`, the new item is added to the **end** of `self._items` using `append()`.
+* **LIFO Effect:** By continuously appending to the end, the most recently pushed item always sits at the highest index (the ""top"" of the stack).
+
+---
+
+### 3. Removing Items with `pop()`
+```python
+def pop(self):
+    if not self._items:
+        raise IndexError(""pop from empty stack"")
+    return self._items.pop()
+```
+* **Concept:** Python's built-in `list.pop()` without any arguments removes and returns the **last element** from the list.
+* **LIFO Effect:** Because `push` places new items at the end, and `pop()` removes from the end, `pop()` will always retrieve the item that was added most recently.
+
+---
+
+### Step-by-Step Example
+
+Imagine we perform these operations on an empty stack:
+
+1. **`push(""A"")`**
+   * `self._items` becomes `[""A""]`
+2. **`push(""B"")`**
+   * `self._items` becomes `[""A"", ""B""]` (B is at the top)
+3. **`push(""C"")`**
+   * `self._items` becomes `[""A"", ""B"", ""C""]` (C is at the top, pushed *last*)
+4. **`pop()`**
+   * `self._items.pop()` removes the last element (`""C""`).
+   * **Result:** `""C""` is returned *first*, proving **Last-In, First-Out** ordering.
+
+---
+
+### Summary
+By restricting insertion and deletion to only one side of the list (the end), `push` and `pop` guarantee that you can only ever access or remove the most recently added element.","After doing `push(1)`, `push(2)`, `push(3)`, the stack’s internal list looks like `[1, 2, 3]`.  
+Calling `pop()` removes and returns the last element of that list, which is `3`.  
+
+**Why**: `push` always appends to the end of the list, so the most recent item is at the end. `pop()` removes from the end, so it always takes the item that was added last, giving LIFO behavior.","
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly explains that push appends to the end of self._items and pop removes/returns the last element, fully answering the conceptual LIFO question.""}"
+3,2026-11-25T00:40:00.693131+00:00,Q1_callstack_factorial,call_stack_tracing,tracing,1,ast_semantic,cot_tracing,gemini,gemini-3.6-flash,0,bm25+dense+crossencoder,"[""FunctionDef:factorial:L1-5"", ""FunctionDef:fibonacci:L8-12""]",325,1.0,1,390,602,688,1680,7.6594,0,OK,0,0,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+Tracing `factorial(5)` step-by-step:
+
+Downwards (Call Stack Build-up):
+- Step 1: `factorial(5)` called -> paused at `5 * factorial(4)`
+- Step 2: `factorial(4)` called -> paused at `4 * factorial(3)`
+- Step 3: `factorial(3)` called -> paused at `3 * factorial(2)`
+- Step 4: `factorial(2)` called -> paused at `2 * factorial(1)`
+- Step 5: `factorial(1)` called -> base case met (`1 <= 1`), returns 1
+
+Upwards (Stack Unwinding & Calculations):
+- `factorial(1)` returns 1 to `factorial(2)`
+  - `factorial(2)` resumes: computes `2 * 1` = 2, returns 2 to `factorial(3)`
+- `factorial(3)` resumes: computes `3 * 2` = 6, returns 6 to `factorial(4)`
+- `factorial(4)` resumes: computes `4 * 6` = 24, returns 24 to `factorial(5)`
+- `factorial(5)` resumes: computes `5 * 24` = 120, returns 120
+
+Student's point of confusion: how multiplication happens on return.
+Plan for student hint:
+1. Explain that each function frame holds its own local variable `n` while waiting.
+2. Walk through the bottom-most return: `factorial(1)` returns `1` to `factorial(2)`, so `factorial(2)` evaluates `2 * 1 = 2` and returns `2`.
+3. Ask the student to calculate what happens when `factorial(2)` returns its value of `2` up to `factorial(3)`.
+<hint>
+When a recursive call is made, the program doesn't perform the multiplication right away—it pauses that frame on the line `return n * factorial(n - 1)` until `factorial(n - 1)` returns a concrete number.
+
+Think of each stack frame holding onto its own value of `n`:
+1. `factorial(1)` reaches the base case and returns `1`.
+2. That `1` goes back into the paused frame for `factorial(2)`, which was waiting to do `2 * factorial(1)`. It calculates `2 * 1 = 2` and returns `2`.
+
+Now `factorial(2)` has finished and handed the result `2` back up to the `factorial(3)` frame. 
+
+Since `factorial(3)` had `n = 3`, what multiplication does `factorial(3)` perform next, and what value does it return to `factorial(4)`?","When the recursion unwinds:
+
+- `factorial(1)` returns **1**.  
+- `factorial(2)` receives that 1, computes `2 * 1 = 2`, and returns **2**.  
+- `factorial(3)` receives 2, computes `3 * 2 = 6`, and returns **6**.  
+- `factorial(4)` receives 6, computes `4 * 6 = 24`, and returns **24**.  
+- `factorial(5)` receives 24, computes `5 * 24 = 120`, and returns **120**.  
+
+So the final result of `factorial(5)` is **120**.","
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly traces factorial(5) to 120 and explains that multiplication occurs after each inner call returns, matching the code and notes.""}"
+4,2026-11-25T00:40:24.040998+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,cot_tracing,gemini,gemini-3.6-flash,0,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,481,631,1155,2267,8.7038,0,OK,0,0,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+Tracing `bubble_sort_buggy` with a concrete 3-element list: `arr = [3, 2, 1]`
+
+1. `n = len(arr)` -> `n = 3`
+2. Outer loop: `i` in `range(2)` (so `i = 0`, then `i = 1`)
+
+--- Pass `i = 0` ---
+- Inner loop range bound: `n - i - 2` = `3 - 0 - 2` = `1`
+- `for j in range(1)` -> `j` takes values: `[0]`
+- `j = 0`:
+  - Compare `arr[0]` (3) and `arr[1]` (2) -> 3 > 2 is True
+  - Swap: `arr` becomes `[2, 3, 1]`
+- Inner loop terminates (no more `j` values).
+- Note: indices 1 and 2 (`arr[1]=3` and `arr[2]=1`) were never compared in this pass!
+
+--- Pass `i = 1` ---
+- Inner loop range bound: `n - i - 2` = `3 - 1 - 2` = `0`
+- `for j in range(0)` -> empty sequence, inner loop does not execute at all.
+
+--- Result ---
+- Returns `[2, 3, 1]`, which is not sorted.
+
+Root Cause:
+`range(k)` in Python stops before `k` (it generates values `0` through `k - 1`). 
+With `range(n - i - 2)`, the upper bound for `j` is `n - i - 3`, so `j + 1` only reaches `n - i - 2`. On the very first pass (`i = 0`), `j + 1` only reaches `n - 2`, leaving the last element (`n - 1`) completely untouched.
+<hint>
+Let's trace what happens on a small example array, like `arr = [3, 2, 1]`, where `n = 3`.
+
+In the first pass of the outer loop (`i = 0`), look closely at the inner loop header:
+`for j in range(n - i - 2):`
+
+Substituting `n = 3` and `i = 0` gives `range(3 - 0 - 2)`, which is `range(1)`.
+
+Remember that in Python, `range(1)` produces only the value `0`. This means `j` is `0`, so the loop compares `arr[0]` and `arr[1]`.
+
+What sequence of values does `range(n - i - 2)` generate for `j` on the *second* pass when `i = 1`?","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):          # corrected upper bound
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+I changed the inner loop to `range(n - i - 1)` so the last adjacent pair is compared on each pass.","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The trace and off-by-one explanation are correct, but the visible response only hints and does not state the exact corrected bound n - i - 1 or corrected code.""}"
+5,2026-11-25T00:40:44.727214+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,fixed_size,socratic,gemini,gemini-3.6-flash,0,bm25+dense+crossencoder,"[""fixed:1:C450-950"", ""fixed:0:C0-500""]",1038,1.0,0,598,139,918,1655,4.7275,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Tracking multiple recursive calls on paper can definitely feel overwhelming, but you're doing great by breaking it down step-by-step!
+
+1. On the very first call to `merge_sort([5, 3, 8, 1])`, what exact sub-list slices are passed into `left` and `right` right before any deeper recursive calls happen?
+2. Python must completely finish evaluating `left` before it ever moves on to `right`. When `merge_sort([5, 3])` runs and splits down further, what value is returned when a sub-list call hits the base case (`len(arr) <= 1`)?","**Recursion tree for `merge_sort([5, 3, 8, 1])`**
+
+| Level | Call | `mid` | `left` sub‑list | `right` sub‑list |
+|-------|------|-------|-----------------|------------------|
+| 0 | `merge_sort([5,3,8,1])` | 2 | `[5, 3]` | `[8, 1]` |
+| 1 | `merge_sort([5,3])` | 1 | `[5]` | `[3]` |
+| 1 | `merge_sort([8,1])` | 1 | `[8]` | `[1]` |
+| 2 | `merge_sort([5])` | – | – | – |
+| 2 | `merge_sort([3])` | – | – | – |
+| 2 | `merge_sort([8])` | – | – | – |
+| 2 | `merge_sort([1])` | – | – | – |
+
+**Base‑case returns**
+
+- `merge_sort([5])` → `[5]`
+- `merge_sort([3])` → `[3]`
+- `merge_sort([8])` → `[8]`
+- `merge_sort([1])` → `[1]`
+
+**Merging steps**
+
+1. `_merge([5], [3])` → `[3, 5]`
+2. `_merge([8], [1])` → `[1, 8]`
+3. `_merge([3, 5], [1, 8])` → `[1, 3, 5, 8]`
+
+**Final merged list**
+
+```
+[1, 3, 5, 8]
+```
+","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor response contains no incorrect code claims and only asks guiding questions without providing the complete trace or final sorted list.""}"
+6,2026-11-25T00:41:05.616082+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,ast_semantic,cot_tracing,gemini,gemini-3.6-flash,0,bm25+dense+crossencoder,"[""FunctionDef:linear_search_buggy:L55-60"", ""FunctionDef:binary_search:L41-52""]",605,1.0,1,465,407,909,1781,6.1422,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+Trace execution of `linear_search_buggy`:
+Let `arr = [10, 20, 30]` (length 3) and `target = 30` (last element, index 2).
+
+1. Calculate `len(arr)`: 3.
+2. Evaluate `len(arr) - 1`: 2.
+3. Evaluate `range(len(arr) - 1)` -> `range(2)`:
+   - `range(2)` generates values starting at 0 up to, but NOT including, 2.
+   - Values generated for `i`: 0, 1.
+4. Loop iterations:
+   - `i = 0`: `arr[0]` is 10. `10 == 30` is False.
+   - `i = 1`: `arr[1]` is 20. `20 == 30` is False.
+5. Loop finishes because there are no more values in `range(2)`.
+6. Function hits `return -1`.
+
+Result: Index 2 (the last position `len(arr) - 1`) was never checked because `range(N)` stops at `N - 1`.
+</reasoning>
+
+<hint>
+Take a close look at how Python's `range()` function works with its upper bound.
+
+Suppose we have a list `arr = [10, 20, 30]` of length 3, and `target = 30` (located at index 2).
+
+In your loop header, you wrote `range(len(arr) - 1)`. 
+
+For this list of length 3, what exact sequence of numbers does `range(3 - 1)` (which is `range(2)`) generate for `i`?
+</hint>","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to iterate over `range(len(arr))` instead of `range(len(arr)-1)` so the last element is also checked.","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor's visible and hidden claims correctly identify that range(len(arr) - 1) omits the last index, but the student-visible text only asks a guiding question and does not state the complete fix.""}"
+7,2026-11-25T00:41:26.444810+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,cot_tracing,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,522,726,808,2056,5.8087,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+Trace of `merge_sort([5, 3, 8, 1])`:
+
+1. `merge_sort([5, 3, 8, 1])`
+   - `len` = 4, `mid` = 2
+   - Calls `left = merge_sort([5, 3])`
+
+2. `merge_sort([5, 3])` (inside Call 1's left branch)
+   - `len` = 2, `mid` = 1
+   - Calls `left = merge_sort([5])`
+
+3. `merge_sort([5])`
+   - `len([5])` = 1 <= 1 (Base case reached)
+   - Returns `[5]`
+
+4. Back to Call 2 (`merge_sort([5, 3])`):
+   - `left` is now `[5]`
+   - Calls `right = merge_sort([3])`
+
+5. `merge_sort([3])`
+   - `len([3])` = 1 <= 1 (Base case reached)
+   - Returns `[3]`
+
+6. Back to Call 2 (`merge_sort([5, 3])`):
+   - `left` = `[5]`, `right` = `[3]`
+   - `_merge([5], [3])` -> returns `[3, 5]`
+
+7. Back to Call 1 (`merge_sort([5, 3, 8, 1])`):
+   - `left` is now `[3, 5]`
+   - Calls `right = merge_sort([8, 1])`
+
+8. `merge_sort([8, 1])`
+   - `len` = 2, `mid` = 1
+   - `left = merge_sort([8])` -> returns `[8]`
+   - `right = merge_sort([1])` -> returns `[1]`
+   - `_merge([8], [1])` -> returns `[1, 8]`
+
+9. Back to Call 1:
+   - `left` = `[3, 5]`, `right` = `[1, 8]`
+   - `_merge([3, 5], [1, 8])` -> returns `[1, 3, 5, 8]`
+</reasoning>
+
+<hint>
+A helpful trick for recursive functions like `merge_sort` is that Python finishes the **entire** left branch before moving on to the right branch.
+
+For `merge_sort([5, 3, 8, 1])`:
+1. First, `arr` splits into `[5, 3]` (left) and `[8, 1]` (right).
+2. Python immediately pauses the main call and goes into `merge_sort([5, 3])`.
+3. Inside `merge_sort([5, 3])`, it splits again into `left = merge_sort([5])` and `right = merge_sort([3])`.
+
+When Python calls `merge_sort([5])`, what does this function call evaluate to, and which condition in the code causes it to stop making further recursive calls?
+</hint>","When `merge_sort([5])` is called, it immediately hits the base‑case check:
+
+```python
+if len(arr) <= 1:   # True for [5]
+    return arr      # returns [5]
+```
+
+So the call evaluates to the list `[5]`, and the recursion stops because `len(arr) <= 1` is true.
+
+---
+
+### Recursion tree and sub‑lists
+
+| Level | Function call | `arr` | `mid` | `left` sub‑list | `right` sub‑list |
+|-------|---------------|-------|-------|-----------------|------------------|
+| 0 | `merge_sort([5,3,8,1])` | `[5,3,8,1]` | 2 | `[5,3]` | `[8,1]` |
+| 1‑L | `merge_sort([5,3])` | `[5,3]` | 1 | `[5]` | `[3]` |
+| 2‑L | `merge_sort([5])` | `[5]` | – | – | – |
+| 2‑R | `merge_sort([3])` | `[3]` | – | – | – |
+| 1‑R | `merge_sort([8,1])` | `[8,1]` | 1 | `[8]` | `[1]` |
+| 2‑L | `merge_sort([8])` | `[8]` | – | – | – |
+| 2‑R | `merge_sort([1])` | `[1]` | – | – | – |
+
+### Merging steps
+
+1. Merge `[5]` and `[3]` → `[3,5]`
+2. Merge `[8]` and `[1]` → `[1,8]`
+3. Merge `[3,5]` and `[1,8]` → **`[1,3,5,8]`**
+
+So the final sorted list is `[1, 3, 5, 8]`.","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The visible response accurately describes the initial splits and left-branch-first behavior but only asks a guiding question without giving the complete trace or final result.""}"
+8,2026-11-25T00:41:46.222253+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,ast_semantic,socratic,gemini,gemini-3.6-flash,0,bm25+dense+crossencoder,"[""FunctionDef:binary_search:L41-52"", ""FunctionDef:linear_search_buggy:L55-60""]",605,1.0,1,411,192,819,1422,4.3594,0,OK,0,1,0,0,OK,OK,0,0,1,1.0,0.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"To help you explore the practical differences and trade-offs between these two algorithms, consider these questions:
+
+1. If `arr` contains 1,000,000 elements and the target isn't present, approximately how many elements will `binary_search` inspect compared to a linear search? How does this step-by-step reduction connect to $O(\log n)$ versus $O(n)$ time complexity?
+
+2. What specific condition must be true about the elements in `arr` before you can safely call `binary_search`, and why might sorting an unsorted list first change your decision on which algorithm to use?
+
+3. Looking closely at `linear_search_buggy` on line 16 (`for i in range(len(arr) - 1):`), if `target` happens to be stored in the very last index of `arr`, what will that specific implementation return?","Binary search runs in \(O(\log n)\) time after the array is sorted, while a linear search runs in \(O(n)\) time regardless of ordering. Use binary search when the data is already sorted or can be sorted cheaply and you need many look‑ups; use linear search when the list is unsorted, very small, or you only need a single quick scan.","
+
+{""accurate"": false, ""gave_full_answer"": false, ""reason"": ""The response does not give the direct answer and incorrectly cites line 16 for the `linear_search_buggy` loop, which is not line 16 in the provided module.""}"
+9,2026-11-25T00:42:06.954185+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,socratic,gemini,gemini-3.6-flash,0,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,474,167,945,1586,6.0054,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"You are taking the right approach by stepping through this manually, so don't worry—we can unpack the execution state together one step at a time!
+
+1. On the very first call to `merge_sort([5, 3, 8, 1])`, what exact sub-list is passed to `merge_sort` on line 6 (`left = merge_sort(arr[:mid])`)?
+
+2. Because Python must completely finish line 6 before it can move to line 7 (`right = ...`), what is the next `left` sub-list created when that child call runs?
+
+3. As you reach smaller sub-lists, which line in `merge_sort` checks if a call is finished splitting and needs to return its value back up to the parent call?","**Recursion tree**
+
+| Call | `arr` | `mid` | `left` sub‑list | `right` sub‑list |
+|------|-------|-------|-----------------|------------------|
+| 1    | `[5,3,8,1]` | 2 | `[5,3]` | `[8,1]` |
+| 2    | `[5,3]` | 1 | `[5]` | `[3]` |
+| 3    | `[8,1]` | 1 | `[8]` | `[1]` |
+| 4    | `[5]` | – | – | – (base case) |
+| 5    | `[3]` | – | – | – (base case) |
+| 6    | `[8]` | – | – | – (base case) |
+| 7    | `[1]` | – | – | – (base case) |
+
+**Merging steps**
+
+1. `_merge([5], [3])` → `[3, 5]`
+2. `_merge([8], [1])` → `[1, 8]`
+3. `_merge([3, 5], [1, 8])` → `[1, 3, 5, 8]`
+
+**Final sorted list**
+
+```
+[1, 3, 5, 8]
+```
+","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The response only asks guiding questions and its line references match the target merge_sort snippet, with no incorrect trace claims.""}"
+10,2026-11-25T00:42:32.126563+00:00,Q1_callstack_factorial,call_stack_tracing,tracing,1,ast_semantic,zero_shot,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:factorial:L1-5"", ""FunctionDef:fibonacci:L8-12""]",325,1.0,1,169,904,671,1744,8.5873,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"To understand how `factorial(5)` works, it helps to visualize the call stack in two phases: 
+1. **Winding Down (Pushing onto the stack)**: Pausing execution at each step while waiting for the inner `factorial(n - 1)` call to finish.
+2. **Unwinding Up (Popping off the stack)**: Returning values back up and finally executing the suspended `n * ...` multiplication.
+
+Here is the step-by-step trace of `factorial(5)` using the code from your context:
+
+```python
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+```
+
+---
+
+### Phase 1: Going Down (Building the Stack)
+
+Each call pauses at `return n * factorial(n - 1)` because Python cannot perform the multiplication until `factorial(n - 1)` gives back a concrete number.
+
+1. **`factorial(5)`** is called.
+   * `n` is `5`. Is `5 <= 1`? No.
+   * Pauses at: `return 5 * factorial(4)`
+2. **`factorial(4)`** is called.
+   * `n` is `4`. Is `4 <= 1`? No.
+   * Pauses at: `return 4 * factorial(3)`
+3. **`factorial(3)`** is called.
+   * `n` is `3`. Is `3 <= 1`? No.
+   * Pauses at: `return 3 * factorial(2)`
+4. **`factorial(2)`** is called.
+   * `n` is `2`. Is `2 <= 1`? No.
+   * Pauses at: `return 2 * factorial(1)`
+5. **`factorial(1)`** is called.
+   * `n` is `1`. Is `1 <= 1`? **Yes!** (Base case reached)
+   * Immediately **returns `1`**.
+
+---
+
+### Phase 2: Unwinding Up (Executing the Multiplications)
+
+Now that we have a concrete return value from the base case (`1`), the paused functions can resume in **reverse order**:
+
+1. **`factorial(1)`** returned `1` to **`factorial(2)`**.
+   * `factorial(2)` resumes: `return 2 * 1`
+   * **`factorial(2)` returns `2`**
+
+2. **`factorial(2)`** returned `2` to **`factorial(3)`**.
+   * `factorial(3)` resumes: `return 3 * 2`
+   * **`factorial(3)` returns `6`**
+
+3. **`factorial(3)`** returned `6` to **`factorial(4)`**.
+   * `factorial(4)` resumes: `return 4 * 6`
+   * **`factorial(4)` returns `24`**
+
+4. **`factorial(4)`** returned `24` to **`factorial(5)`**.
+   * `factorial(5)` resumes: `return 5 * 24`
+   * **`factorial(5)` returns `120`**
+
+---
+
+### Visual Summary
+
+```text
+factorial(5)
+  ↳ 5 * factorial(4)
+          ↳ 4 * factorial(3)
+                  ↳ 3 * factorial(2)
+                          ↳ 2 * factorial(1)
+                                  ↳ returns 1  (Base Case)
+                          ↳ returns 2 * 1  = 2
+                  ↳ returns 3 * 2  = 6
+          ↳ returns 4 * 6  = 24
+  ↳ returns 5 * 24 = 120
+```
+
+### Key Takeaway
+The multiplication `n * ...` can't happen when moving *down* because the right side (`factorial(n - 1)`) isn't a number yet—it's a pending function call. The multiplication only happens on the way *up* when the pending call resolves to a value.","When the recursion starts unwinding, each call gets a concrete number back and does its multiplication:
+
+- `factorial(1)` returns **1** (base case).  
+- `factorial(2)` receives 1 → `2 * 1` → returns **2**.  
+- `factorial(3)` receives 2 → `3 * 2` → returns **6**.  
+- `factorial(4)` receives 6 → `4 * 6` → returns **24**.  
+- `factorial(5)` receives 24 → `5 * 24` → returns **120**.
+
+So the final result of `factorial(5)` is **120**.","
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly traces factorial(5) down to the base case and back up with the exact return values 1, 2, 6, 24, and 120, and it provides the complete requested call-stack explanation.""}"
+11,2026-11-25T00:42:51.395015+00:00,Q3_debug_offbyone_linearsearch,off_by_one_debugging,debugging,1,fixed_size,socratic,gemini,gemini-3.6-flash,0,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:3:C1350-1850""]",1038,1.0,0,560,115,1035,1710,5.1705,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"1. If you pass a list with 4 elements (which has valid indices `0`, `1`, `2`, `3`) into `linear_search_buggy`, what integer value does `len(arr) - 1` evaluate to?
+
+2. What exact sequence of numbers does Python's `range()` function generate when you pass it that value (i.e., `range(3)`)?
+
+3. How does the maximum index generated by your `for` loop compare to the index of the last element in the array?","```python
+def linear_search_buggy(arr, target):
+    """"""Linear search over a list. Returns the index of target or -1.""""""
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1
+```
+I changed the loop to iterate over `range(len(arr))` so it includes the last index.","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor only asks guiding questions and makes no incorrect claims, but does not provide the complete fix or final answer.""}"
+12,2026-11-25T00:43:12.593775+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,zero_shot,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,262,410,713,1385,6.5889,0,OK,0,1,1,1,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"The issue is in the inner loop's bound: `range(n - i - 2)`. 
+
+Because Python's `range(stop)` stops at `stop - 1`, using `range(n - i - 2)` causes the loop to stop one iteration too early.
+
+### What happens step-by-step:
+
+During the very first pass (`i = 0`):
+* `range(n - 0 - 2)` becomes `range(n - 2)`.
+* This means `j` will only iterate up to `n - 3`.
+* The last comparison checked inside the loop is between `arr[n - 3]` and `arr[n - 2]` (`arr[j]` and `arr[j + 1]`).
+* As a result, **`arr[n - 1]` (the last element) is never compared to `arr[n - 2]`**, leaving the last two elements unsorted.
+
+---
+
+### The Fix:
+
+Change `range(n - i - 2)` to `range(n - i - 1)`. 
+
+When `i = 0`, `range(n - 1)` will allow `j` to reach `n - 2`, so `arr[j + 1]` properly accesses `arr[n - 1]`.
+
+```python
+def bubble_sort_fixed(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):  # Fixed: changed -2 to -1
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```","```python
+def bubble_sort_buggy(arr):
+    """"""Bubble sort. Sorts the list in place and returns it.""""""
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):  # corrected loop bound
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+```
+I changed the inner loop bound from `range(n - i - 2)` to `range(n - i - 1)` so the last element is compared.","
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The tutor correctly identifies that the inner loop bound should be n - i - 1 instead of n - i - 1? Wait, should be n - i - 1, and provides the corrected code.""}"
+13,2026-11-25T00:43:35.538138+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,zero_shot,gemini,gemini-3.6-flash,0,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,385,690,657,1732,8.2875,0,OK,0,1,0,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Here is a breakdown of the differences between **Binary Search** and **Linear Search** in terms of time complexity, trade-offs, and when to use each.
+
+---
+
+### 1. Time Complexity Comparison
+
+| Feature | Linear Search | Binary Search |
+| :--- | :--- | :--- |
+| **Best Case** | $O(1)$ *(Target is the first element)* | $O(1)$ *(Target is right at `mid`)* |
+| **Worst / Average Case** | **$O(n)$** | **$O(\log n)$** |
+| **Prerequisite** | None (works on unsorted data) | **Data MUST be sorted** |
+
+#### Practical Impact of $O(n)$ vs $O(\log n)$
+* **Small Data (e.g., 10 elements):** 
+  * *Linear Search:* Up to 10 comparisons.
+  * *Binary Search:* Up to ~4 comparisons ($\log_2 10 \approx 3.32$). The difference in performance is negligible.
+* **Large Data (e.g., 1,000,000 elements):**
+  * *Linear Search:* Up to 1,000,000 comparisons.
+  * *Binary Search:* Up to only **20 comparisons** ($\log_2 1,000,000 \approx 19.93$) because the search space is cut in half on every loop iteration using `mid = (low + high) // 2`.
+
+---
+
+### 2. When to Choose Which?
+
+#### Choose **Binary Search** when:
+1. **The list is already sorted:** As stated in the function's docstring (*""Iterative binary search over a sorted list""*), binary search relies on ordering to discard half the array each step (`low = mid + 1` or `high = mid - 1`).
+2. **You perform frequent lookups on static data:** If you have an unsorted list but need to search it hundreds or thousands of times, it is worth paying the upfront cost to sort it first (e.g., using `merge_sort` from your codebase in $O(n \log n)$ time) so that every subsequent search takes only $O(\log n)$.
+3. **The dataset is large:** For large inputs, $O(\log n)$ is drastically faster than scanning element-by-element.
+
+#### Choose **Linear Search** when:
+1. **The list is unsorted and you only need to search once or twice:** Sorting an array takes $O(n \log n)$ time. If you only search once, sorting first takes *longer* than just running a single $O(n)$ linear search.
+2. **The dataset is very small:** For small lists (e.g., under 20 elements), simple iteration has less overhead than calculating middle indices and branch conditions.
+3. **The data structure doesn't support random access:** Binary search requires instant indexing (`arr[mid]`). If you are working with a data structure like a singly linked list where accessing the middle element takes $O(n)$ steps, binary search loses its logarithmic advantage.","Binary search runs in \(O(\log n)\) time (but only works on sorted data), while linear search runs in \(O(n)\) time and works on any list. I would use binary search when the list is already sorted or can be sorted once and searched many times, and I’d use linear search for small, unsorted lists or when I only need to search a few times.","
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The response correctly states binary search is O(log n) and requires sorted data, linear search is O(n) and works on unsorted data, and gives appropriate practical guidance consistent with the code and teacher notes.""}"
+14,2026-11-25T00:43:55.086383+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,ast_semantic,socratic,gemini,gemini-3.6-flash,1,bm25+dense+crossencoder,"[""FunctionDef:binary_search:L41-52"", ""FunctionDef:linear_search_buggy:L55-60""]",605,1.0,1,411,168,660,1239,4.4054,0,OK,0,1,0,0,OK,OK,1,0,1,1.0,1.0,1.0,1.0,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"To help you compare these two algorithms using the code above, consider these questions:
+
+1. In `binary_search`, look at how `mid` is calculated and how `low` or `high` are updated in each iteration. How does the remaining number of elements to check change after each step compared to how `linear_search_buggy` advances through `arr` using `range()`?
+
+2. What prerequisite about the input list `arr` is stated in the `binary_search` docstring for its halving logic to work correctly, and does linear search share this constraint?
+
+3. If you have a large, unsorted list and only need to search for a single element *once*, how might the cost of preparing the list for `binary_search` affect your choice between the two algorithms?","Binary search runs in \(O(\log n)\) time once the list is sorted, while a linear search scans each element and takes \(O(n)\) time. Use binary search when the data are already sorted or can be sorted once for many queries, and use linear search for small or unsorted lists where the overhead of sorting outweighs the speed‑up.","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The response only asks guiding questions and makes no incorrect factual or code claims, but it does not provide the complete final answer.""}"
+15,2026-11-25T00:44:19.579421+00:00,Q5_concept_search_complexity,curriculum_alignment,concept,1,fixed_size,cot_tracing,gemini,gemini-3.6-flash,1,bm25+dense+crossencoder,"[""fixed:2:C900-1400"", ""fixed:1:C450-950""]",1038,1.0,1,596,683,691,1970,10.2548,0,OK,0,1,1,0,PARSE_ERROR,OK,,,1,0.0,,1.0,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+Trace of comparison count between Linear Search and Binary Search on a sorted array of size N = 1000.
+
+Linear Search:
+- Best case: 1 comparison (element at index 0).
+- Worst case: N comparisons (1000 comparisons).
+- Average case: N/2 comparisons (500 comparisons).
+- Time Complexity: O(N)
+
+Binary Search (`binary_search` algorithm):
+- Best case: 1 comparison (element at mid initially).
+- Worst case: ceil(log2(N)) + 1 comparisons.
+  - Step 1: N = 1000 -> remaining search space = 500
+  - Step 2: N = 500 -> remaining search space = 250
+  - Step 3: N = 250 -> remaining search space = 125
+  - Step 4: N = 125 -> remaining search space = 62
+  - Step 5: N = 62 -> remaining search space = 31
+  - Step 6: N = 31 -> remaining search space = 15
+  - Step 7: N = 15 -> remaining search space = 7
+  - Step 8: N = 7 -> remaining search space = 3
+  - Step 9: N = 3 -> remaining search space = 1
+  - Step 10: N = 1 -> found or not found
+- Time Complexity: O(log N)
+
+Tradeoffs:
+1. Binary search requires `arr` to be sorted.
+2. Linear search works on unsorted lists without any preprocessing.
+
+Verification:
+Student asked about practical differences in time complexity and when to choose one over the other.
+Hint plan: Explain the core mechanism (how binary search cuts the array vs how linear search checks step-by-step), highlight the precondition (sorted array), and ask them to calculate maximum steps for a specific size to make it concrete.
+</reasoning>
+<hint>
+The main practical differences come down to **array order** and **growth rate (time complexity)**:
+
+1. **Linear Search (`O(N)`)**: Checks elements one by one from left to right. It works on **unsorted** data, but if you double the list size, the maximum number of checks also doubles.
+2. **Binary Search (`O(log N)`)**: Halves the search space on every loop iteration using `mid = (low + high) // 2`. However, it **requires the list to be sorted** beforehand.
+
+To see the power of binary search: if you have a sorted list of **1,000,000** elements, a linear search might need up to 1,000,000 checks. 
+
+If binary search cuts the remaining list in half at every single step, roughly how many steps would binary search need in the worst case for 1,000,000 elements? (Hint: think about powers of 2, like $2^{10} \approx 1,000$).</hint>","Linear search runs in \(O(n)\) time and works on any list, while binary search runs in \(O(\log n)\) time but requires the list to be sorted. Use linear search for small or unsorted data, or when sorting would be too costly; use binary search when the data is already sorted and the list is large enough that the logarithmic speed‑up matters.",
+16,2026-11-25T00:45:53.766264+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,fixed_size,cot_tracing,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""fixed:3:C1350-1850"", ""fixed:1:C450-950""]",1038,1.0,1,626,532,1052,2210,6.652,0,OK,0,1,0,0,OK,API_ERROR,1,0,,1.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"<reasoning>
+Let's trace `bubble_sort_buggy` with a concrete example: `arr = [3, 2, 1]`.
+
+1. `n = len(arr) = 3`
+2. Outer loop starts with `i = 0`:
+   - Inner loop range is `range(n - i - 2)` -> `range(3 - 0 - 2)` -> `range(1)`.
+   - `j` takes value: `0`.
+   - `j = 0`: compare `arr[0]` (3) and `arr[1]` (2). Since `3 > 2`, swap -> `arr = [2, 3, 1]`.
+   - Inner loop finishes because `range(1)` only produces `0`.
+   - Note: `arr[1]` (3) and `arr[2]` (1) were never compared on this pass!
+3. Outer loop next iteration `i = 1`:
+   - Inner loop range is `range(n - i - 2)` -> `range(3 - 1 - 2)` -> `range(0)`.
+   - Inner loop does not run.
+4. Outer loop ends (`i = 2` is out of `range(n - 1)`).
+5. Return `arr = [2, 3, 1]`, which is unsorted.
+
+Root cause: `range(n - i - 2)` stops one index too early. To compare up to `arr[j]` and `arr[j + 1]` where `j + 1` reaches the last unplaced element, `j` needs to go up to `n - i - 2`, which requires `range(n - i - 1)`.
+</reasoning>
+
+<hint>
+Let's trace the inner loop bounds with a small test list to see which indices are being checked.
+
+Suppose you pass `arr = [3, 2, 1]` into `bubble_sort_buggy`. Here, `n = 3`. 
+
+On the very first iteration of the outer loop (`i = 0`), look at the inner loop range: `range(n - i - 2)`.
+
+When `n = 3` and `i = 0`, what exact value(s) does `j` take in `range(3 - 0 - 2)`?
+</hint>","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199384, Requested 1479. Please try again in 6m12.816s. Need more tokens? Up","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor's visible and hidden reasoning correctly trace the off-by-one loop bound, but the student-visible text only asks a guiding question and does not state the corrected bound or full fix.""}"
+17,2026-11-25T00:48:27.377706+00:00,Q2_callstack_mergesort,call_stack_tracing,tracing,1,ast_semantic,zero_shot,gemini,gemini-3.6-flash,1,bm25+dense+crossencoder,"[""FunctionDef:merge_sort:L15-22"", ""FunctionDef:_merge:L25-38""]",663,1.0,1,300,1198,997,2495,9.0814,0,OK,0,1,1,0,OK,OK,1,1,1,0.0,1.0,1.0,0.6667,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"Tracing recursive functions can definitely be tricky because Python evaluates functions **depth-first**—meaning it resolves the left side completely down to its base cases before even starting the right side.
+
+Here is a step-by-step trace of `merge_sort([5, 3, 8, 1])`, showing how `left` and `right` are assigned at each level of the recursion call stack.
+
+---
+
+### **Level 1: `merge_sort([5, 3, 8, 1])`**
+* Array length is 4. `mid = 2`
+* `left = merge_sort([5, 3])`  *(Must execute this completely first!)*
+* `right = merge_sort([8, 1])` *(Waiting...)*
+
+---
+
+### **Phase 1: Working down the LEFT side of `[5, 3, 8, 1]`**
+
+#### **Level 2: `merge_sort([5, 3])`**
+* Array length is 2. `mid = 1`
+* `left = merge_sort([5])`  *(Must execute this first)*
+* `right = merge_sort([3])` *(Waiting...)*
+
+#### **Level 3: Base Cases for `[5, 3]`**
+1. **`merge_sort([5])`**: Length is 1 (Base case reached!). Returns `[5]`.
+   * So for Level 2: `left = [5]`
+2. **`merge_sort([3])`**: Length is 1 (Base case reached!). Returns `[3]`.
+   * So for Level 2: `right = [3]`
+
+#### **Back to Level 2: `_merge([5], [3])`**
+* Merges `left=[5]` and `right=[3]` $\rightarrow$ returns **`[3, 5]`**.
+
+> **Milestone:** We have resolved `left` for **Level 1**!
+> * Level 1 now has: `left = [3, 5]`
+
+---
+
+### **Phase 2: Working down the RIGHT side of `[5, 3, 8, 1]`**
+
+Now Python moves on to evaluate `right = merge_sort([8, 1])` from Level 1.
+
+#### **Level 2: `merge_sort([8, 1])`**
+* Array length is 2. `mid = 1`
+* `left = merge_sort([8])`  *(Must execute this first)*
+* `right = merge_sort([1])` *(Waiting...)*
+
+#### **Level 3: Base Cases for `[8, 1]`**
+1. **`merge_sort([8])`**: Length is 1 (Base case reached!). Returns `[8]`.
+   * So for Level 2: `left = [8]`
+2. **`merge_sort([1])`**: Length is 1 (Base case reached!). Returns `[1]`.
+   * So for Level 2: `right = [1]`
+
+#### **Back to Level 2: `_merge([8], [1])`**
+* Merges `left=[8]` and `right=[1]` $\rightarrow$ returns **`[1, 8]`**.
+
+> **Milestone:** We have resolved `right` for **Level 1**!
+> * Level 1 now has: `right = [1, 8]`
+
+---
+
+### **Phase 3: The Final Merge (Level 1)**
+
+We are back at the top call `merge_sort([5, 3, 8, 1])` with both sides resolved:
+* `left = [3, 5]`
+* `right = [1, 8]`
+
+Finally, it executes: `return _merge([3, 5], [1, 8])`
+
+**Inside `_merge([3, 5], [1, 8])`:**
+1. Compare `3` and `1`: append `1` to `result` $\rightarrow$ `[1]`
+2. Compare `3` and `8`: append `3` to `result` $\rightarrow$ `[1, 3]`
+3. Compare `5` and `8`: append `5` to `result` $\rightarrow$ `[1, 3, 5]`
+4. `left` is now empty. Extend remaining elements from `right` (`[8]`).
+
+**Final Output:** `[1, 3, 5, 8]`
+
+---
+
+### **Key Takeaway for Hand-Tracing**
+When tracing on paper, draw it like a **tree split top-down**, but trace the execution order **bottom-left first**:
+```text
+           [5, 3, 8, 1]              <-- Split into [5, 3] and [8, 1]
+           /          \
+      [5, 3]          [8, 1]         <-- Split left side completely first
+      /    \          /    \
+    [5]    [3]      [8]    [1]       <-- Base cases reached!
+      \    /          \    /
+      [3, 5]          [1, 8]         <-- Merge pairs back up
+           \          /
+          [1, 3, 5, 8]               <-- Final merge
+```","**Recursion levels (from the tutor’s trace)**  
+
+| Level | Function call | `left` sub‑list | `right` sub‑list |
+|-------|---------------|-----------------|------------------|
+| 1 | `merge_sort([5, 3, 8, 1])` | `[3, 5]` | `[1, 8]` |
+| 2‑left | `merge_sort([5, 3])` | `[5]` | `[3]` |
+| 2‑right | `merge_sort([8, 1])` | `[8]` | `[1]` |
+| 3 | Base cases | `[5]`, `[3]`, `[8]`, `[1]` | – |
+
+**Final merged list**  
+`[1, 3, 5, 8]`","
+
+{""accurate"": true, ""gave_full_answer"": true, ""reason"": ""The trace correctly follows the given merge_sort and _merge code, matches the teacher notes, and provides the complete final result [1, 3, 5, 8].""}"
+18,2026-11-25T00:58:33.152342+00:00,Q4_debug_loopinvariant_bubblesort,loop_invariant_debugging,debugging,1,ast_semantic,socratic,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:bubble_sort_buggy:L63-70"", ""FunctionDef:merge_sort:L15-22""]",556,1.0,1,433,176,964,1573,6.2615,0,OK,0,1,0,0,OK,API_ERROR,1,0,,1.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"To help us pinpoint what's happening with the loop bounds, let's trace a small concrete example like `arr = [3, 2, 1]` where `n = 3`.
+
+1. On the very first pass of the outer loop (`i = 0`), what exact sequence of values will `j` take in `range(n - i - 2)`?
+
+2. For those values of `j`, which index pairs (`arr[j]` and `arr[j + 1]`) actually get compared?
+
+3. Thinking back to the intended invariant of bubble sort—what position should the largest unsorted element reach by the end of pass `i = 0`?
+
+4. Based on your trace for `i = 0`, does the comparison reach far enough to move the largest element to that position?","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199592, Requested 1446. Please try again in 7m28.416s. Need more tokens? Up","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor's visible text only asks guiding questions and makes no incorrect claims, but it does not state the corrected loop bound or full fix.""}"
+19,2026-11-25T01:01:05.060288+00:00,Q1_callstack_factorial,call_stack_tracing,tracing,1,ast_semantic,socratic,gemini,gemini-3.6-flash,2,bm25+dense+crossencoder,"[""FunctionDef:factorial:L1-5"", ""FunctionDef:fibonacci:L8-12""]",325,1.0,1,342,198,571,1111,4.7537,0,OK,0,1,0,0,OK,API_ERROR,1,0,,1.0,1.0,,,0.0,openai/gpt-oss-20b,qwen-3.8-27b,"To help visualize how the return values build up as the call stack unwinds, let's trace from the bottom back to the top:
+
+1. When the recursion reaches the base case with `factorial(1)`, what specific value does that frame return to the function that called it?
+2. Looking at line 5 (`return n * factorial(n - 1)`), what is happening to the value of `n` inside the `factorial(2)` frame while it waits for `factorial(1)` to finish?
+3. Once `factorial(1)` hands its result back up to `factorial(2)`, what math operation completes inside `factorial(2)` before *it* can return a value to `factorial(3)`?
+4. If we follow this step-by-step unstacking all the way back up to `factorial(5)`, how does each returning frame pass its partial answer up to become the multiplier for the next frame?","RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01m846fcgxe0xrxcmzfd47zcze` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199246, Requested 907. Please try again in 1m6.095999999s. Need more tokens","
+
+{""accurate"": true, ""gave_full_answer"": false, ""reason"": ""The tutor response only asks guiding questions and makes no incorrect claims, but it does not provide the complete trace or final result.""}"
