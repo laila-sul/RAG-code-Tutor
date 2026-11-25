@@ -78,7 +78,10 @@ def main():
     ap.add_argument("annotator_b")
     a = ap.parse_args()
 
-    res = pd.read_csv(a.results_csv).drop_duplicates("run_id").set_index("run_id")
+    res = pd.read_csv(a.results_csv)
+    # a resumed or retried run can leave an unscored row with the same run_id: keep the scored one
+    res["_scored"] = res["P"].notna() if "P" in res else True
+    res = res.sort_values("_scored", kind="stable").drop_duplicates("run_id", keep="last").set_index("run_id")
     A, B = load(a.annotator_a), load(a.annotator_b)
     ids = A.index.intersection(B.index)
     print(f"Rows in A: {len(A)}, in B: {len(B)}, shared: {len(ids)}")
