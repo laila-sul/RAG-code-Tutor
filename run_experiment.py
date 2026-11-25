@@ -865,6 +865,14 @@ def call_with_retries(backend, system, user, temperature, role):
                 print("      >>> NON-RETRYABLE error (wrong model name or key). Not retrying.", flush=True)
                 last["n_retries"] = attempt
                 return last
+            m_wait = re.search(r"try again in (?:(\d+)m)?([\d.]+)s", low)
+            wait_s = (int(m_wait.group(1) or 0) * 60 + float(m_wait.group(2))) if m_wait else 0
+            if ("tokens per day" in low or "(tpd)" in low) and wait_s > 90:
+                print("      >>> DAILY TOKEN LIMIT reached for this model (wait "
+                      f"~{wait_s / 60:.0f} min). Not retrying.", flush=True)
+                last["n_retries"] = attempt
+                last["quota_exhausted"] = True
+                return last
             if "exceeded your current quota" in low or "billing details" in low:
                 compact = low.replace(" ", "").replace("_", "")
                 if "perday" in compact or "daily" in compact:
@@ -1217,6 +1225,7 @@ def run_experiment(args):
 
     mode = "a" if args.resume else "w"
     n_done = 0
+    aux_fail = 0
     # If the CSV is locked (open in Excel, OneDrive sync, read-only) switch to a new file name
     # instead of crashing. A timestamped name can never clash with an existing file.
     try:
@@ -1332,6 +1341,17 @@ def run_experiment(args):
             fh.flush()
             n_done += 1
             print(f"{res['status']} ({res['latency_seconds']}s, retries={res['n_retries']}) P={row['P']}")
+            if (row.get("P") in (None, "")) and (row.get("judge_status") == "API_ERROR"
+                                                  or row.get("student_status") == "API_ERROR"):
+                aux_fail += 1
+            else:
+                aux_fail = 0
+            if aux_fail >= 2:
+                print("\n[run] The student or judge failed on two runs in a row (probably a daily token limit). "
+                      "Stopping so the tutor quota is not spent on runs that cannot be scored. The tutor outputs "
+                      "are saved; after the limit resets, run:\n"
+                      f"      python run_experiment.py --fill-missing {out} <same student/judge options>")
+                break
             if res["status"] not in ("OK", "MOCK"):
                 print(f"      ERROR DETAIL: {res['text'][:400]}")
             if args.sleep:
@@ -1503,6 +1523,104 @@ def rejudge(args):
     print(f"[rejudge] wrote {out}")
 
 
+def fill_missing(args):
+    """Complete the student and/or judge step for saved rows that have a tutor output but no P.
+    No tutor call is made, so no tutor quota (e.g. Gemini) is spent. The file is updated in place
+    (a .bak copy is kept)."""
+    import shutil
+    src = args.fill_missing
+    with open(src, encoding="utf-8", newline="") as f:
+        rd = csv.DictReader(f)
+        fields, rows = rd.fieldnames, list(rd)
+    keyf = lambda r: (r["query_id"], r["chunking_strategy"], r["prompt_strategy"], r["provider"], r["repeat"])
+
+    def complete(r):
+        return (r.get("student_success") or "") != "" if r["provider"] == "control" else (r.get("P") or "") != ""
+
+    has = lambda v: v is not None and str(v) != ""  # 0 and 0.0 are real values
+    finished = {keyf(r) for r in rows if complete(r)}
+    todo = {}
+    for r in rows:
+        k = keyf(r)
+        if k in finished:
+            continue
+        if r["provider"] == "control" or (r.get("status") in ("OK", "MOCK") and r.get("tutor_output")):
+            todo[k] = r  # the last row of a cell wins
+    queries = {q["query_id"]: q for q in QUERIES}
+    judge_model = args.judge_model or args.simulator_model
+    sim = make_backend(args.simulator_provider, args.simulator_model, args.mock)
+    judge = make_backend(args.judge_provider or args.simulator_provider, judge_model, args.mock)
+    print(f"[fill-missing] {len(todo)} saved rows to complete in {src}")
+    if not todo:
+        return
+    if not args.skip_preflight and not args.mock:
+        preflight([(sim, "student"), (judge, "judge")])
+    shutil.copyfile(src, src + ".bak")
+    done_n = 0
+    try:
+        for i, (k, r) in enumerate(todo.items(), 1):
+            q = queries[r["query_id"]]
+            profile = StudentProfile(**q["profile"])
+            stop = False
+            if r["provider"] == "control":
+                s_sys, s_user = student_prompts(q, profile, "(The tutor has not replied. You are working alone.)")
+                sr = call_with_retries(sim, s_sys, s_user, SIMULATOR_TEMPERATURE, "student")
+                r["student_status"] = sr["status"]
+                if sr["status"] in ("OK", "MOCK"):
+                    ok = student_success(q, sr["text"])
+                    r["student_output"], r["student_success"], r["P3_student_success"] = sr["text"], int(ok), float(ok)
+                    done_n += 1
+                stop = bool(sr.get("quota_exhausted"))
+                print(f"  [{i}/{len(todo)}] {r['query_id'][:18]} | control | student={sr['status']}")
+            else:
+                visible, hidden, _ = split_tutor_output(r["prompt_strategy"], r["tutor_output"])
+                hit, cb = regex_leak(q, visible)
+                if not has(r.get("student_success")) or r.get("student_status") not in ("OK", "MOCK"):
+                    s_sys, s_user = student_prompts(q, profile, visible)
+                    sr = call_with_retries(sim, s_sys, s_user, SIMULATOR_TEMPERATURE, "student")
+                    r["student_status"] = sr["status"]
+                    if sr["status"] in ("OK", "MOCK"):
+                        ok = student_success(q, sr["text"])
+                        r["student_output"], r["student_success"], r["P3_student_success"] = sr["text"], int(ok), float(ok)
+                    stop = stop or bool(sr.get("quota_exhausted"))
+                if not stop and (not has(r.get("judge_accurate")) or r.get("judge_status") not in ("OK", "MOCK")):
+                    jp = judge_prompt(q, visible, hidden)
+                    n_try = 0
+                    for temp, jrole in ((JUDGE_TEMPERATURE, "judge"), (JUDGE_TEMPERATURE, "judge_retry"), (0.3, "judge_retry")):
+                        n_try += 1
+                        jr = call_with_retries(judge, JUDGE_SYSTEM, jp, temp, jrole)
+                        pj = parse_judge(jr["text"]) if jr["status"] in ("OK", "MOCK") else None
+                        if pj or jr["status"] not in ("OK", "MOCK"):
+                            break
+                    r["judge_raw"] = (f"[judge attempt {n_try}] " if n_try > 1 else "") + jr["text"][:480]
+                    r["judge_model"] = judge_model
+                    r["judge_status"] = jr["status"] if (pj or jr["status"] not in ("OK", "MOCK")) else "PARSE_ERROR"
+                    if pj:
+                        r["judge_accurate"], r["judge_full_answer"] = int(pj["accurate"]), int(pj["gave_full_answer"])
+                    stop = stop or bool(jr.get("quota_exhausted"))
+                have_j = has(r.get("judge_accurate"))
+                have_s = has(r.get("P3_student_success"))
+                if have_j:
+                    leak = hit or cb or bool(int(float(r["judge_full_answer"])))
+                    r["P1_scaffolding"], r["P2_accuracy"] = (0.0 if leak else 1.0), float(r["judge_accurate"])
+                if have_j and have_s:
+                    r["P"] = combine_P(float(r["P1_scaffolding"]), float(r["P2_accuracy"]), float(r["P3_student_success"]))
+                    done_n += 1
+                print(f"  [{i}/{len(todo)}] {r['query_id'][:18]} | {r['chunking_strategy']} | {r['prompt_strategy']} | "
+                      f"{r['provider']} ... P={r.get('P') or None}")
+            if args.sleep:
+                time.sleep(args.sleep)
+            if stop:
+                print("\n[fill-missing] A daily limit was reached. Progress is saved; run the same command again later.")
+                break
+    finally:
+        with open(src, "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(rows)
+    print(f"[fill-missing] completed {done_n} rows; file updated (backup: {src}.bak)")
+
+
 def parse_args():
     p = argparse.ArgumentParser(description="RAG-ITS experiment harness (v2)")
     p.add_argument("--tutors", default="gemini,groq,cerebras")
@@ -1525,6 +1643,8 @@ def parse_args():
                    help="scaffold: the hint may not state the result (default); explain: original prompt")
     p.add_argument("--validation-sample-from", default=None, metavar="CSV",
                    help="(re)write the human validation sample from a finished results CSV (no API calls)")
+    p.add_argument("--fill-missing", default=None, metavar="CSV",
+                   help="complete missing student/judge steps on saved rows (no tutor calls)")
     p.add_argument("--max-runs", type=int, default=0,
                    help="stop after this many new runs (for daily-quota backends); resume later with --resume")
     p.add_argument("--rejudge", default=None, metavar="CSV",
@@ -1558,6 +1678,9 @@ if __name__ == "__main__":
         sys.exit(0 if selftest() else 1)
     if a.rejudge:
         rejudge(a)
+        sys.exit(0)
+    if a.fill_missing:
+        fill_missing(a)
         sys.exit(0)
     if a.validation_sample_from:
         export_validation_sample(a.validation_sample_from, a.validation_n, force=True)
