@@ -34,6 +34,8 @@ USAGE
 -----
     python analyze_results.py experiment_results.csv
     python analyze_results.py experiment_results.csv --alpha 0.5 --lref 1 --tref 1000
+    python analyze_results.py experiment_results_rejudged.csv --providers groq cerebras   # chapter's pooled numbers
+    python analyze_results.py experiment_results_rejudged.csv --providers gemini          # partial Gemini rows
     python analyze_results.py mock_results.csv --allow-mock      # pipeline test only
 ==================================================================
 """
@@ -114,6 +116,9 @@ def main():
     ap.add_argument("--allow-mock", action="store_true")
     ap.add_argument("--keep-truncated", action="store_true")
     ap.add_argument("--latency-cap", type=float, default=60.0)
+    ap.add_argument("--providers", nargs="+", default=None,
+                    help="analyse only these tutor providers (e.g. groq cerebras); the chapter pools "
+                         "Groq and Cerebras and reports Gemini separately")
     a = ap.parse_args()
 
     df = pd.read_csv(a.csv)
@@ -126,6 +131,9 @@ def main():
     df = df[df["status"].isin(["OK", "MOCK"])].copy()
     control = df[df["provider"] == "control"].copy()
     df = df[df["provider"] != "control"].copy()
+    if a.providers:
+        df = df[df["provider"].isin(a.providers)].copy()
+        n_all = len(df) + len(control)
     n_trunc = int(df["truncated"].sum())
     if not a.keep_truncated:
         df = df[df["truncated"] == 0].copy()
@@ -181,12 +189,40 @@ def main():
     print(eff.to_string(index=False))
     eff.to_csv("table_main_effects.csv", index=False)
 
+    print("\n=== Pooled by prompting strategy (mean, 95% bootstrap CI for P) ===")
+    rows = []
+    for pname, grp in df.groupby("prompt_strategy"):
+        lo, hi = boot_ci(grp["P"])
+        rows.append({"prompt_strategy": pname, "n": len(grp), "P": grp["P"].mean(), "P_ci_lo": lo, "P_ci_hi": hi,
+                     "P1": grp["P1_scaffolding"].mean(), "P2": grp["P2_accuracy"].mean(),
+                     "P_no_P3": grp["P_no_P3"].mean(), "P1_zero_runs": int((grp["P1_scaffolding"] == 0).sum())})
+    byp = pd.DataFrame(rows)
+    print(byp.round(3).to_string(index=False))
+    byp.to_csv("table_by_prompt.csv", index=False)
+
+    if {"groq", "cerebras"} <= set(df["provider"]):
+        print("\n=== Same model, two serving providers: Groq minus Cerebras (paired) ===")
+        prow = []
+        for metric in ("latency_seconds", "P"):
+            pv = df[df["provider"].isin(["groq", "cerebras"])].pivot_table(
+                index=["query_id", "chunking_strategy", "prompt_strategy", "repeat"],
+                columns="provider", values=metric, aggfunc="mean")
+            d = (pv["groq"] - pv["cerebras"]).dropna()
+            lo, hi = boot_ci(d)
+            prow.append({"metric": metric, "n_pairs": len(d), "mean_diff_groq_minus_cerebras": d.mean(),
+                         "ci95_lo": lo, "ci95_hi": hi,
+                         "mean_groq": df[df.provider == "groq"][metric].mean(),
+                         "mean_cerebras": df[df.provider == "cerebras"][metric].mean()})
+        prow = pd.DataFrame(prow)
+        print(prow.round(4).to_string(index=False))
+        prow.to_csv("table_provider_contrast.csv", index=False)
+
     print("\n=== ITEI sensitivity (weights of latency vs tokens; optional quality floor) ===")
     sens = sensitivity(df, a.lref, a.tref)
     print(sens.to_string(index=False))
     sens.to_csv("table_itei_sensitivity.csv", index=False)
 
-    print("\nSaved: table_all_configurations.csv, table_main_effects.csv, table_itei_sensitivity.csv")
+    print("\nSaved: table_all_configurations.csv, table_main_effects.csv, table_by_prompt.csv, table_itei_sensitivity.csv (and table_provider_contrast.csv for Groq vs Cerebras)")
     print("Reminder: report n per configuration and the CIs; do not claim differences whose "
           "CIs overlap zero.")
 
