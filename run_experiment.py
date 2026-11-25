@@ -866,12 +866,15 @@ def call_with_retries(backend, system, user, temperature, role):
                 last["n_retries"] = attempt
                 return last
             if "exceeded your current quota" in low or "billing details" in low:
-                # Quota exhaustion does not clear within seconds; retrying only wastes time.
-                print("      >>> QUOTA EXHAUSTED for this key/model. Not retrying. Wait for the quota to "
-                      "reset (daily), use another model (set GEMINI_MODEL), enable billing, or run other "
-                      "backends with --tutors groq,cerebras.", flush=True)
-                last["n_retries"] = attempt
-                return last
+                compact = low.replace(" ", "").replace("_", "")
+                if "perday" in compact or "daily" in compact:
+                    # A daily quota does not clear within seconds; retrying only wastes time.
+                    print("      >>> DAILY QUOTA EXHAUSTED for this key/model. Not retrying. Run again after "
+                          "the quota resets (use --resume), enable billing, or use another model.", flush=True)
+                    last["n_retries"] = attempt
+                    last["quota_exhausted"] = True
+                    return last
+                print("      >>> per-minute quota hit; waiting and retrying.", flush=True)
         time.sleep((5, 20, 45, 60)[min(attempt, 3)])  # long waits: free-tier limits are per-minute
     last["n_retries"] = MAX_RETRIES
     return last
@@ -1233,6 +1236,9 @@ def run_experiment(args):
         for run_id, (q, chunker, pname, prov, rep) in enumerate(jobs, 1):
             if (q["query_id"], chunker, pname, prov, str(rep)) in skip:
                 continue
+            if args.max_runs and n_done >= args.max_runs:
+                print(f"\n[run] Reached --max-runs {args.max_runs}. Run again with --resume to continue.")
+                break
             profile = StudentProfile(**q["profile"])
             if prov == "control":
                 print(f"  [{run_id}/{len(jobs)}] {q['query_id'][:18]} | NO-TUTOR CONTROL ... ",
@@ -1264,6 +1270,10 @@ def run_experiment(args):
             print(f"  [{run_id}/{len(jobs)}] {q['query_id'][:18]} | {chunker} | {pname} | {prov} ... ",
                   end="", flush=True)
             res = call_with_retries(tutors[prov], system, user, TUTOR_TEMPERATURE, "tutor")
+            if res.get("quota_exhausted"):
+                print(f"\n[run] Daily quota reached for {prov}. Stopping without writing this run; "
+                      "run the same command again later with --resume.")
+                break
 
             row = {k: None for k in CSV_FIELDS}
             row.update({
@@ -1330,7 +1340,7 @@ def run_experiment(args):
     export_validation_sample(out, args.validation_n)
 
 
-def export_validation_sample(path, n):
+def export_validation_sample(path, n, force=False):
     """30 random rows for two human annotators (inter-rater agreement + judge validation)."""
     rows = []
     with open(path, encoding="utf-8", newline="") as f:
@@ -1351,6 +1361,9 @@ def export_validation_sample(path, n):
     cols = ["run_id", "query_id", "prompt_strategy", "student_visible_text", "hidden_reasoning",
             "student_output"]
     out = os.path.splitext(path)[0] + "_human_validation_sample.csv"
+    if os.path.exists(out) and not force:
+        print(f"[run] {out} already exists; not overwritten (use --validation-sample-from to rebuild it).")
+        return
     with open(out, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(cols + ["human_scaffolding_0_1", "human_accurate_0_1", "annotator"])
@@ -1512,6 +1525,8 @@ def parse_args():
                    help="scaffold: the hint may not state the result (default); explain: original prompt")
     p.add_argument("--validation-sample-from", default=None, metavar="CSV",
                    help="(re)write the human validation sample from a finished results CSV (no API calls)")
+    p.add_argument("--max-runs", type=int, default=0,
+                   help="stop after this many new runs (for daily-quota backends); resume later with --resume")
     p.add_argument("--rejudge", default=None, metavar="CSV",
                    help="re-score saved tutor outputs in CSV with the current judge prompt (no tutor calls)")
     p.add_argument("--control-only", action="store_true",
@@ -1545,6 +1560,6 @@ if __name__ == "__main__":
         rejudge(a)
         sys.exit(0)
     if a.validation_sample_from:
-        export_validation_sample(a.validation_sample_from, a.validation_n)
+        export_validation_sample(a.validation_sample_from, a.validation_n, force=True)
         sys.exit(0)
     run_experiment(a)
