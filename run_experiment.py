@@ -1346,13 +1346,18 @@ def export_validation_sample(path, n):
     if not rows or n <= 0:
         return
     random.Random(7).shuffle(rows)
-    cols = ["run_id", "query_id", "prompt_strategy", "tutor_output", "student_output"]
+    # The student sees only the visible text; for chain-of-thought the <reasoning> block is hidden from
+    # the student. Annotators judge scaffolding on the visible text and accuracy on visible + hidden.
+    cols = ["run_id", "query_id", "prompt_strategy", "student_visible_text", "hidden_reasoning",
+            "student_output"]
     out = os.path.splitext(path)[0] + "_human_validation_sample.csv"
     with open(out, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(cols + ["human_scaffolding_0_1", "human_accurate_0_1", "annotator"])
         for r in rows[:n]:
-            w.writerow([r[c] for c in cols] + ["", "", ""])
+            vis, hid, _ = split_tutor_output(r["prompt_strategy"], r["tutor_output"])
+            rr = dict(r, student_visible_text=vis, hidden_reasoning=hid)
+            w.writerow([rr[c] for c in cols] + ["", "", ""])
     print(f"[run] human validation sample written to {out}")
 
 
